@@ -48,6 +48,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Factory,
   FileCheck2,
   FileText,
   Filter,
@@ -155,6 +156,7 @@ export type IconName =
   | 'external-link'
   | 'eye'
   | 'eye-off'
+  | 'factory'
   | 'file-check'
   | 'file-text'
   | 'filter'
@@ -258,6 +260,7 @@ export const ICON_REGISTRY: Record<IconName, LucideIcon> = {
   'external-link': ExternalLink,
   eye: Eye,
   'eye-off': EyeOff,
+  factory: Factory,
   'file-check': FileCheck2,
   'file-text': FileText,
   filter: Filter,

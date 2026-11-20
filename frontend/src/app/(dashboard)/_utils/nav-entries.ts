@@ -47,6 +47,11 @@ const MAIN_NAV: NavEntry[] = [
     icon: 'zap',
     requiredScope: 'triggers:read',
   },
+  {
+    label: 'Factory',
+    href: APP_ROUTES.factory,
+    icon: 'factory',
+  },
 ];
 
 const POLICY_NAV: NavEntry[] = [

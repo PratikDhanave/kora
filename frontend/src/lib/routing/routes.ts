@@ -41,6 +41,7 @@ export const APP_ROUTES = {
   connections: '/connections',
   environments: '/environments',
   triggers: '/triggers',
+  factory: '/factory',
   mcpGateway: {
     servers: '/mcp-gateway',
     server: (slug: string) => `/mcp-gateway/${slug}` as const,
