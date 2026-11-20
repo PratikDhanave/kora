@@ -22,6 +22,11 @@ export type NavGroup = { label: string; items: NavEntry[] };
 const MAIN_NAV: NavEntry[] = [
   { label: 'Dashboard', href: APP_ROUTES.home, icon: 'layout-dashboard' },
   {
+    label: 'Factory',
+    href: APP_ROUTES.factory,
+    icon: 'factory',
+  },
+  {
     label: 'Agents',
     href: APP_ROUTES.agents.list,
     icon: 'bot',
@@ -46,11 +51,6 @@ const MAIN_NAV: NavEntry[] = [
     href: APP_ROUTES.triggers,
     icon: 'zap',
     requiredScope: 'triggers:read',
-  },
-  {
-    label: 'Factory',
-    href: APP_ROUTES.factory,
-    icon: 'factory',
   },
 ];
 
