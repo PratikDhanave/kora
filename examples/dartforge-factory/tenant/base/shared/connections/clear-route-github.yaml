@@ -1,0 +1,15 @@
+apiVersion: runkora.io/v1alpha1
+kind: Connection
+metadata:
+  name: clear-route-github
+spec:
+  adapter: github_app
+  baseHost: github.com
+  secretRef: github-app-key
+  secretKey: key.pem
+  config:
+    # A DEDICATED dartforge GitHub App, installed only on the source repos. Its bot login MUST be
+    # dartforge-app[bot] to match the PR/author filters in the triggers. Fill these before deploy.
+    app_id: "REPLACE_DARTFORGE_APP_ID"
+    installation_id: 0
+    owner: clear-route

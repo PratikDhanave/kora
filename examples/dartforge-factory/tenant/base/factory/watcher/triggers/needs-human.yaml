@@ -1,0 +1,46 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-needs-human
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  enabled: false
+  kind: webhook
+  source: clear-route-github
+  eventType: issues
+  routing:
+    candidates:
+    - dartforge-watcher
+    model:
+      family: typesafe
+      name: jev-1-14
+    fallback: dartforge-watcher
+    joinRuns: true
+  match:
+    action:
+    - labeled
+    label.name:
+    - needs-human
+    # Only a trusted issue author reaches the write-capable watcher, so an outside
+    # author's issue.title cannot inject instructions through the prompt.
+    issue.author_association:
+    - OWNER
+    - MEMBER
+    - COLLABORATOR
+    # filled by repository-group/source-repos labels
+    repository.full_name: []
+  coalesce:
+    key: 'dartforge-watcher-needs-human:{{ repository.full_name }}#{{ issue.number }}'
+    windowSeconds: 60
+  maxParallel: 4
+  overflow: wait
+  maxQueueDepth: 32
+  timeoutSeconds: 30
+  promptTemplate: |
+    An issue needs a human decision.
+
+    Repository: {{ repository.full_name }}
+    Number: #{{ issue.number }}
+    Title: {{ issue.title }}
+    Link: {{ issue.html_url }}

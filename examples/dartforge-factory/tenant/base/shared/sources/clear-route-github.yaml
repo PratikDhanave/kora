@@ -1,0 +1,9 @@
+apiVersion: runkora.io/v1alpha1
+kind: TriggerSource
+metadata:
+  name: clear-route-github
+spec:
+  provider: github
+  signingSecretRef:
+    name: clear-route-github-webhook
+    key: secret

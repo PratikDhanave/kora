@@ -1,0 +1,16 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-heartbeat-heartbeat
+spec:
+  enabled: false
+  kind: scheduled
+  agent: dartforge-heartbeat
+  schedule:
+    cronExpression: '*/30 * * * *'
+    timezone: Australia/Sydney
+  maxParallel: 1
+  overflow: replace
+  maxQueueDepth: 1
+  timeoutSeconds: 30
+  promptTemplate: Heartbeat.

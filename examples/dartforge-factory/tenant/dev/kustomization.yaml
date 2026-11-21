@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kora-tenant-dartforge
+
+resources:
+  - ../base
+  - ../../_common/dev/roles
+  - secrets.yaml

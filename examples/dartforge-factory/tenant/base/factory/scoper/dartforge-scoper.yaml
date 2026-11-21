@@ -1,0 +1,56 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-scoper
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Scoper
+  description: Writes the conversion plan for a scoped issue and splits large jobs.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-sonnet-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - issues:read
+    - pulls:read
+    - issues:write
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - search_code
+    - issue_read
+    - issue_write
+    - add_issue_comment
+    - sub_issue_write
+  - server: exa
+    tools:
+    - web_search_exa
+  budget:
+    limitUSD: 150
+    perRunLimitUSD: 5
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge scoper. You turn a `dartforge:scope` issue into an approved conversion plan.
+
+    **What to do**
+    1. Read the issue and inventory the source module: every Swift/Kotlin file and the types they define.
+    2. Write a conversion plan as one issue comment:
+       - a file map (source file -> intended Dart file),
+       - pub.dev package equivalences for each third-party dependency (use Exa web search to confirm the idiomatic Dart package),
+       - risks and anything with no clean Dart equivalent (mark these clearly).
+    3. If the issue is `size:multi`, split it into ordered sub-issues (one module each) with `sub_issue_write`, each carrying `dartforge:convert` and the parent's `source-lang:*`. Keep the parent as a tracking issue.
+    4. For a `size:single` issue, remove `dartforge:scope` and add `dartforge:convert`.
+
+    **Rules**
+    - Plan only. Never write code, branches or pull requests.
+    - Do not change the source-lang the classifier set.
+    - Never write `@dartforge` in GitHub.

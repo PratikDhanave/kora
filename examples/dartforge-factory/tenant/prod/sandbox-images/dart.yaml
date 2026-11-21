@@ -1,0 +1,13 @@
+# PLACEHOLDER image. Build dartforge-containers/dart FROM kora-sandbox-base (uid 100,
+# io.runkora.sandbox.base label) with the Dart + Flutter SDK + gh, push to ECR, then
+# replace the image ref with the real repo and digest.
+apiVersion: runkora.io/v1alpha1
+kind: SandboxImage
+metadata:
+  name: dartforge-dart
+spec:
+  description: kora-sandbox-base plus the Dart and Flutter SDK and gh, for conversion and verification.
+  image: 293883685938.dkr.ecr.ap-southeast-2.amazonaws.com/dartforge-containers/dart:REPLACE-WITH-SHA
+  pullSecretRef:
+    name: ecr-pull
+  warm: true

@@ -1,0 +1,19 @@
+# Hosted by Exa. The tool-gateway attaches the API key.
+apiVersion: runkora.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: exa
+spec:
+  displayName: "Exa"
+  description: "Web search and page contents from Exa."
+  endpoint: "https://mcp.exa.ai/mcp"
+  transport: streamable-http
+  reintrospectIntervalSeconds: 900
+  callerIdentity: none
+  auth:
+    headers:
+      - name: Authorization
+        prefix: "Bearer "
+        secretRef:
+          name: exa-mcp-key
+          key: api_key

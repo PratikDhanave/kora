@@ -1,0 +1,123 @@
+# GitHub MCP server for clear-route. It mints its own installation token from the clear-route-agent App key.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-mcp
+  labels:
+    app: github-mcp
+spec:
+  # Two replicas keep a pod serving while the other is evicted. The server issues no MCP session, so a call can land on either replica.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: github-mcp
+  template:
+    metadata:
+      labels:
+        # Matched by the MCPServer workload.selector, which keeps the identity-proxy off this pod.
+        app: github-mcp
+    spec:
+      # Overrides the image default of root.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: github-mcp
+          # Pinned by digest: a third-party registry with access to the App key.
+          image: us-central1-docker.pkg.dev/genuine-flight-317411/mcp/github-app-mcp:1.0.8@sha256:ade5991dfe78ed5408bf10d35c5a75fe47d0a86d9f567961e1b22b6e42547298
+          args:
+            - "--port"
+            - "8000"
+            - "--outputTransport"
+            - "streamableHttp"
+            - "--stdio"
+            - "python3 /app/wrapper.py"
+          ports:
+            - name: mcp
+              containerPort: 8000
+          env:
+            - name: GITHUB_APP_ID
+              value: "REPLACE_DARTFORGE_APP_ID"
+            - name: GITHUB_APP_INSTALLATION_ID
+              value: "REPLACE_DARTFORGE_INSTALLATION_ID"
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: github-app-key
+                  key: key.pem
+            # No 'context' toolset: get_me calls GET /user, which an installation token cannot.
+            - name: GITHUB_TOOLSETS
+              value: "repos,issues,pull_requests,actions"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+# Node drift and consolidation evict one replica at a time.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: github-mcp
+  labels:
+    app: github-mcp
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: github-mcp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: github-mcp
+  labels:
+    app: github-mcp
+spec:
+  selector:
+    app: github-mcp
+  ports:
+    # Istio routes HTTP only for an http port name.
+    - name: http
+      appProtocol: http
+      port: 8000
+      targetPort: 8000
+---
+# Synced before the Deployment: the pod webhook reads this to classify the pods.
+apiVersion: runkora.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: github
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  displayName: "ClearRoute GitHub"
+  description: "GitHub issues, pull requests, repositories and actions, as the clear-route-agent GitHub App."
+  endpoint: "http://github-mcp.kora-tenant-dartforge.svc:8000/mcp"
+  transport: streamable-http
+  reintrospectIntervalSeconds: 900
+  callerIdentity: none
+  workload:
+    selector:
+      app: github-mcp

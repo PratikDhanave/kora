@@ -1,0 +1,18 @@
+# Repository group 'source-repos': the Swift/Kotlin repos the factory converts.
+# A resource labelled repository-group/source-repos: "true" gets the group's repos.
+# triggers/ lists them by full name for a Trigger match; agents/ by bare name for an Agent connector.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+openapi:
+  path: schema.yaml
+
+patches:
+  - path: triggers/source-repos.yaml
+    target:
+      kind: Trigger
+      labelSelector: repository-group/source-repos=true
+  - path: agents/source-repos.yaml
+    target:
+      kind: Agent
+      labelSelector: repository-group/source-repos=true

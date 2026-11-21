@@ -1,0 +1,39 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-run-budget-exhausted
+spec:
+  enabled: false
+  kind: event
+  eventType: agents.run.budget_exhausted.v1
+  routing:
+    candidates:
+    - dartforge-watcher
+    model:
+      family: typesafe
+      name: jev-1-14
+    fallback: dartforge-watcher
+    joinRuns: true
+  match:
+    data.entity.agent:
+    - dartforge-classifier
+    - dartforge-scoper
+    - dartforge-converter-swift
+    - dartforge-converter-kotlin
+    - dartforge-compile-verifier
+    - dartforge-code-reviewer
+    - dartforge-change-mapper
+    - dartforge-researcher
+    - dartforge-web-researcher
+    - dartforge-heartbeat
+  maxParallel: 4
+  overflow: wait
+  maxQueueDepth: 32
+  timeoutSeconds: 30
+  promptTemplate: |
+    A factory run exhausted its budget.
+
+    Agent: {{ data.entity.agent }}
+    Run id: {{ data.entity.id }}
+    State: {{ data.entity.state }}
+    Error: {{ data.entity.error }}

@@ -1,0 +1,140 @@
+# Turns on every dartforge trigger in prod. Base ships them enabled: false.
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-change-mapper-draft
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-classifier-issue-labeled
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-classifier-returned
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-code-reviewer-draft
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-code-reviewer-ready
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-compile-verifier-reviewed
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-compile-verifier-verify
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-converter-ci-failed
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-converter-kotlin-convert
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-converter-reviewed
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-converter-swift-convert
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-heartbeat-heartbeat
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-scoper-scope
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-github-mention
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-github-review-mention
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-merged
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-needs-human
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-run-budget-exhausted
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-run-failed
+spec:
+  enabled: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-run-guardrail-paused
+spec:
+  enabled: true

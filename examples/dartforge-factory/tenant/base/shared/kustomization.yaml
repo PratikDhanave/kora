@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - connections/clear-route-github.yaml
+  - sources/clear-route-github.yaml
+  - mcp-servers/github.yaml
+  - mcp-servers/exa.yaml

@@ -1,0 +1,30 @@
+# Tells kustomize to merge a Trigger's repository match list when patching, so each
+# group adds its repositories instead of replacing the previous group's.
+definitions:
+  Trigger:
+    x-kubernetes-group-version-kind:
+      - {group: runkora.io, kind: Trigger, version: v1alpha1}
+    properties:
+      spec:
+        properties:
+          match:
+            properties:
+              repository.full_name:
+                x-kubernetes-patch-strategy: merge
+  # Merges an Agent's connectors by connection, and their repository lists, so each group adds
+  # its repositories to the agent's GitHub connector and keeps the agent's actions.
+  Agent:
+    x-kubernetes-group-version-kind:
+      - {group: runkora.io, kind: Agent, version: v1alpha1}
+    properties:
+      spec:
+        properties:
+          connectors:
+            type: array
+            x-kubernetes-patch-merge-key: connection
+            x-kubernetes-patch-strategy: merge
+            items:
+              properties:
+                resources:
+                  type: array
+                  x-kubernetes-patch-strategy: merge

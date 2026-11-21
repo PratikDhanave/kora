@@ -1,0 +1,18 @@
+apiVersion: runkora.io/v1alpha1
+kind: KoraTenant
+metadata:
+  name: dartforge
+spec:
+  displayName: DartForge
+  active: true
+  oidc:
+    issuerURL: https://login.microsoftonline.com/1cd7d628-cf39-4a90-9a15-d2a110cb7061/v2.0
+    clientID: set-per-environment
+    clientSecretRef:
+      name: kora-oidc
+      namespace: kora-system
+    scopes: [openid, profile, email]
+    emailDomains: [clearroute.io]
+    claimBinding:
+      claim: roles
+      values: [tenant-dartforge]

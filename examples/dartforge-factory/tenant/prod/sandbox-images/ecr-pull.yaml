@@ -1,0 +1,29 @@
+# ECR tokens last 12 hours. External Secrets mints a new one as kora-sandbox-pull, which can
+# pull only constellation-containers images, and keeps ecr-pull current for the operator and
+# the sandboxes.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: ECRAuthorizationToken
+metadata:
+  name: ecr-token
+spec:
+  region: ap-southeast-2
+  role: arn:aws:iam::293883685938:role/kora-sandbox-pull
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ecr-pull
+spec:
+  refreshInterval: 6h
+  target:
+    name: ecr-pull
+    template:
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: '{"auths":{"{{ .proxy_endpoint }}":{"username":"{{ .username }}","password":"{{ .password }}"}}}'
+  dataFrom:
+  - sourceRef:
+      generatorRef:
+        apiVersion: generators.external-secrets.io/v1alpha1
+        kind: ECRAuthorizationToken
+        name: ecr-token

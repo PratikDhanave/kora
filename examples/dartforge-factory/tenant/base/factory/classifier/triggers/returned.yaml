@@ -1,0 +1,38 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-classifier-returned
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  enabled: false
+  kind: webhook
+  source: clear-route-github
+  eventType: issues
+  agent: dartforge-classifier
+  match:
+    action:
+    - labeled
+    label.name:
+    - dartforge:reclassify
+    # Only trusted issue authors are processed, so an outside author's issue.title/body is never fed to a write-capable agent.
+    issue.author_association:
+    - OWNER
+    - MEMBER
+    - COLLABORATOR
+    # filled by repository-group/source-repos labels
+    repository.full_name: []
+  coalesce:
+    key: 'dartforge-classifier-returned:{{ repository.full_name }}#{{ issue.number }}'
+    windowSeconds: 60
+  maxParallel: 4
+  overflow: wait
+  maxQueueDepth: 32
+  timeoutSeconds: 30
+  promptTemplate: |
+    Issue {{ repository.full_name }}#{{ issue.number }} was returned for reclassification.
+
+    Repository: {{ repository.full_name }}
+    Number: #{{ issue.number }}
+    Title: {{ issue.title }}
+    Link: {{ issue.html_url }}

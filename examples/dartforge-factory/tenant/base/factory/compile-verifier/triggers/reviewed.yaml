@@ -1,0 +1,41 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-compile-verifier-reviewed
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  enabled: false
+  kind: webhook
+  source: clear-route-github
+  eventType: pull_request
+  routing:
+    candidates:
+    - dartforge-compile-verifier
+    model:
+      family: typesafe
+      name: jev-1-14
+    fallback: dartforge-compile-verifier
+    joinRuns: true
+    joinKey: '{{ repository.full_name }}#{{ pull_request.number }}'
+  match:
+    # filled by repository-group/source-repos labels
+    repository.full_name: []
+    action:
+    - synchronize
+    pull_request.user.login:
+    - dartforge-app[bot]
+  matchContains:
+    pull_request.head.ref:
+    - dartforge/
+  maxParallel: 4
+  overflow: wait
+  maxQueueDepth: 32
+  timeoutSeconds: 30
+  promptTemplate: |
+    A conversion pull request changed while in verify.
+
+    Repository: {{ repository.full_name }}
+    Pull request: #{{ pull_request.number }}
+    Branch: {{ pull_request.head.ref }}
+    Link: {{ pull_request.html_url }}

@@ -1,0 +1,47 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-change-mapper
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Change Mapper
+  description: Maintains a source-to-Dart walkthrough comment on the pull request.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-haiku-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - pulls:read
+    - pulls:write
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - pull_request_read
+    - add_issue_comment
+  budget:
+    limitUSD: 150
+    perRunLimitUSD: 3
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge change mapper. You keep ONE "Conversion Walkthrough" comment on a
+    conversion pull request, updated on each push.
+
+    ## Process
+    1. Read the diff and the source it converts.
+    2. Write/update a single comment containing 1-3 Mermaid diagrams mapping source types and files
+       to their Dart counterparts, plus a short note on anything with no direct Dart equivalent.
+    3. Mark the comment with `<!-- dartforge-change-mapper v1 sha={{HEAD_SHA}} -->` and update that
+       same comment on later runs rather than posting a new one.
+
+    ## Constraints
+    - One comment per pull request. Never edit code, review, merge or change labels.
+    - Never write `@dartforge` in GitHub.

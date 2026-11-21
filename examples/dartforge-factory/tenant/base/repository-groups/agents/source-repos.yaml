@@ -1,0 +1,11 @@
+# Source repositories to convert, by bare name. Added to the GitHub connector of every
+# Agent labelled repository-group/source-repos: "true". Replace the placeholder.
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: source-repos
+spec:
+  connectors:
+  - connection: clear-route-github
+    resources:
+    - REPLACE-ME

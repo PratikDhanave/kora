@@ -1,0 +1,53 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-converter-reviewed
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  enabled: false
+  kind: webhook
+  source: clear-route-github
+  eventType: pull_request_review
+  routing:
+    candidates:
+    - dartforge-converter-swift
+    - dartforge-converter-kotlin
+    model:
+      family: typesafe
+      name: jev-1-14
+    fallback: dartforge-converter-swift
+    joinRuns: true
+    joinKey: '{{ repository.full_name }}#{{ pull_request.number }}'
+  match:
+    # filled by repository-group/source-repos labels
+    repository.full_name: []
+    action:
+    - submitted
+    review.state:
+    - changes_requested
+    - commented
+    pull_request.user.login:
+    - dartforge-app[bot]
+    # Only a repo owner/member/collaborator review drives a converter re-run, so a drive-by
+    # reviewer cannot inject instructions through the untrusted review.body in the prompt.
+    review.author_association:
+    - OWNER
+    - MEMBER
+    - COLLABORATOR
+  matchContains:
+    pull_request.head.ref:
+    - dartforge/
+  maxParallel: 4
+  overflow: wait
+  maxQueueDepth: 32
+  timeoutSeconds: 30
+  promptTemplate: |
+    {{ review.user.login }} reviewed a conversion pull request.
+
+    Repository: {{ repository.full_name }}
+    Pull request: #{{ pull_request.number }}
+    Branch: {{ pull_request.head.ref }}
+    Review state: {{ review.state }}
+    Review: {{ review.html_url }}
+    Body: {{ review.body }}

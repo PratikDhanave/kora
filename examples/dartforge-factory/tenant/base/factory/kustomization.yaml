@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+commonAnnotations:
+  runkora.io/repository: github.com/clear-route/kora-platform
+
+# The DartForge factory: a labelled GitHub issue becomes an approved plan, then one PR per module.
+resources:
+  - environments
+  - classifier
+  - scoper
+  - converter
+  - compile-verifier
+  - review
+  - watcher
+  - researcher
+
+# Added next to ../.., so the component on ../base/kustomization does not reach it.
+components:
+  - ../repository-groups

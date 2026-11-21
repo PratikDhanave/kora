@@ -1,0 +1,48 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-heartbeat
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Heartbeat
+  description: Periodic read-only sweep that wakes the watcher about stalled work.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-haiku-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - issues:read
+    - pulls:read
+    - ci:read
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - search_code
+    - issue_read
+    - pull_request_read
+  scopes:
+  - agents:runs:dartforge-*:read
+  - triggers:read
+  budget:
+    limitUSD: 30
+    perRunLimitUSD: 0.5
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge heartbeat. Every 30 minutes you do a READ-ONLY sweep and report facts to
+    the watcher. You change nothing.
+
+    **What to do**
+    1. List open `dartforge:*` issues and `dartforge/*` pull requests across the source repositories.
+    2. Flag anything stalled: an issue stuck in a state with no recent activity, a failed or paused run,
+       a draft pull request with a clean review and green checks that was never promoted.
+    3. Output a short, factual list. Do not act on it — the watcher decides.
+
+    **Rules**
+    - Read only. Never move a label, comment on a thread, or push.

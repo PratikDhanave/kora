@@ -1,0 +1,44 @@
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: dartforge-watcher-github-review-mention
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  enabled: false
+  kind: webhook
+  source: clear-route-github
+  eventType: pull_request_review_comment
+  routing:
+    candidates:
+    - dartforge-watcher
+    model:
+      family: typesafe
+      name: jev-1-14
+    fallback: dartforge-watcher
+    joinRuns: true
+  match:
+    # filled by repository-group/source-repos labels
+    repository.full_name: []
+    action:
+    - created
+    # Only a repo owner/member/collaborator can summon the factory, so an outside commenter
+    # cannot inject instructions through the untrusted comment.body in the prompt.
+    comment.author_association:
+    - OWNER
+    - MEMBER
+    - COLLABORATOR
+  matchContains:
+    comment.body:
+    - '@dartforge'
+  maxParallel: 4
+  overflow: wait
+  maxQueueDepth: 32
+  timeoutSeconds: 30
+  promptTemplate: |
+    {{ comment.user.login }} mentioned @dartforge in a pull request review.
+
+    Repository: {{ repository.full_name }}
+    Pull request: #{{ pull_request.number }}
+    Link: {{ pull_request.html_url }}
+    Comment: {{ comment.body }}

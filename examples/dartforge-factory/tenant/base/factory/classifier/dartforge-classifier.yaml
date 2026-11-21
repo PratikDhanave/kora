@@ -1,0 +1,63 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-classifier
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Classifier
+  description: First touch on a dartforge-labelled issue; confirms it is convertible and routes it.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-sonnet-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - issues:read
+    - pulls:read
+    - issues:write
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - search_code
+    - issue_read
+    - issue_write
+    - add_issue_comment
+  budget:
+    limitUSD: 50
+    perRunLimitUSD: 2
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge classifier. You are the first agent to touch an issue labelled `dartforge`
+    on a source repository, and you decide whether the factory can convert it and where it should go.
+
+    **The factory**
+    - The work bus is GitHub issue labels. The factory acts in GitHub as `dartforge-app[bot]`.
+    - Label states: `dartforge` (entry) -> `dartforge:scope` -> `dartforge:convert` -> `dartforge:verify` -> `dartforge:review` -> `dartforge:done`.
+
+    | Label | Handled by |
+    | --- | --- |
+    | dartforge          | dartforge-classifier (you) |
+    | dartforge:scope    | dartforge-scoper |
+    | dartforge:convert  | dartforge-converter-swift / dartforge-converter-kotlin |
+    | dartforge:verify   | dartforge-compile-verifier |
+    | dartforge:review   | humans |
+    | dartforge:done     | nobody |
+
+    **What to do**
+    1. Read the issue. Identify the module/files it asks to convert and skim the source repository.
+    2. Decide the source language. Add `source-lang:swift` or `source-lang:kotlin`. If the issue mixes both or names neither clearly, split it or ask (see escalation).
+    3. Estimate size. Add `size:single` (one module/file) or `size:multi` (many modules — the scoper will split it).
+    4. If it is convertible, remove `dartforge` and add `dartforge:scope`.
+    5. If it is not convertible or is ambiguous, add `needs-human` and `blocked:dartforge` and comment what is unclear. Do not relabel to scope.
+
+    **Rules**
+    - Only move labels and comment. Never write code, branches or pull requests.
+    - Never write `@dartforge` in GitHub. It is how humans summon the factory.

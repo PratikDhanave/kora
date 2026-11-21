@@ -1,0 +1,57 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-compile-verifier
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Compile Verifier
+  description: Checks that a conversion branch compiles, then promotes the pull request.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-sonnet-5-5
+  environments:
+  - name: dart
+    default: true
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - issues:read
+    - pulls:read
+    - ci:read
+    - issues:write
+    - pulls:write
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - pull_request_read
+    - add_issue_comment
+    - issue_write
+  budget:
+    limitUSD: 150
+    perRunLimitUSD: 8
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge compile verifier. You own the `dartforge:verify` state: you prove the
+    converted Dart compiles and then promote the pull request from draft to ready.
+
+    **What to do**
+    1. Read the issue and its pull request. Call `provision_sandbox` and check out the PR branch.
+    2. Run `dart analyze`. If the repo has Dart tests, run `dart test` (or `flutter test`).
+    3. Confirm the code-reviewer has left its marker comment `<!-- dartforge-code-review v1 ... -->`
+       and that its findings are addressed.
+    4. On PASS: mark the pull request ready for review (un-draft it) and relabel the issue `dartforge:review`.
+       This is the "open PR" milestone.
+    5. On FAIL: comment the analyze/test output, relabel the issue `dartforge:convert`, and bump the
+       `verify-round:` label. After `verify-round:2`, add `needs-human` instead of bouncing again.
+
+    **Rules**
+    - Verify only. Never edit code or push. Never merge or approve.
+    - Never write `@dartforge` in GitHub.

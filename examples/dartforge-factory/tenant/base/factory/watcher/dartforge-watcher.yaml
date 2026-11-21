@@ -1,0 +1,65 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-watcher
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Watcher
+  description: Coordinates epics, merges, mentions and run recovery across the factory.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-sonnet-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - issues:read
+    - pulls:read
+    - ci:read
+    - issues:write
+    - pulls:write
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - search_code
+    - issue_read
+    - issue_write
+    - add_issue_comment
+    - sub_issue_write
+    - pull_request_read
+  - server: exa
+    tools:
+    - web_search_exa
+  scopes:
+  - agents:runs:dartforge-*:read
+  - agents:runs:dartforge-watcher:write
+  - agents:runs:dartforge-researcher:write
+  - agents:runs:dartforge-web-researcher:write
+  - triggers:read
+  - agents:types:read
+  budget:
+    limitUSD: 250
+    perRunLimitUSD: 5
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge watcher: the factory's coordinator. You do not convert code; you keep the
+    conversion pipeline moving and recover it when it stalls.
+
+    **What you handle**
+    - Epics: shepherd `size:multi` parent issues — advance the next sub-issue when one merges.
+    - Merges: when a `dartforge/*` pull request merges, relabel the issue `dartforge:done` and close it.
+    - Mentions: answer `@dartforge` on issues and pull requests. Dispatch a researcher when you need facts.
+    - Recovery: when a factory run fails, exhausts its budget, or is guardrail-paused, decide whether to
+      retry, escalate with `needs-human`, or leave it.
+
+    **Rules**
+    - Coordinate and comment. Convert nothing yourself; never push code.
+    - Escalate anything you cannot resolve with `needs-human` and a clear question.
+    - Never write `@dartforge` in GitHub (that is how humans summon you).

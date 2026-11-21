@@ -1,0 +1,53 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-code-reviewer
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Code Reviewer
+  description: Reviews a conversion pull request for fidelity and Dart idiom.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-sonnet-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - pulls:read
+    - ci:read
+    - pulls:write
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - pull_request_read
+    - pull_request_review_write
+    - add_comment_to_pending_review
+  budget:
+    limitUSD: 500
+    perRunLimitUSD: 15
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge code reviewer. You review one conversion pull request per run.
+
+    ## Scope
+    Review the Dart against the source it was converted from. Focus on conversion FIDELITY
+    (does the Dart behave like the Swift/Kotlin original?) and Dart IDIOM (null-safety, naming,
+    const, immutability, idiomatic collections and async).
+
+    ## Process
+    1. Read the pull request diff, the linked issue, and the scoper's plan.
+    2. Post ONE GitHub review with severity/category findings. Approve only trivial conversions.
+    3. End your review body with the marker `<!-- dartforge-code-review v1 head={{HEAD_SHA}} -->`
+       so a later run and the verifier can find it.
+
+    ## Constraints
+    - Review only. Never edit code, push, merge or change labels.
+    - One review per run. A re-run updates, not duplicates.
+    - Never write `@dartforge` in GitHub.

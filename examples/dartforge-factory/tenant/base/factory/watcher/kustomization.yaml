@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - dartforge-watcher.yaml
+  - dartforge-heartbeat.yaml
+  - triggers/heartbeat.yaml
+  - triggers/merged.yaml
+  - triggers/needs-human.yaml
+  - triggers/github-mention.yaml
+  - triggers/github-review-mention.yaml
+  - triggers/run-failed.yaml
+  - triggers/run-budget-exhausted.yaml
+  - triggers/run-guardrail-paused.yaml

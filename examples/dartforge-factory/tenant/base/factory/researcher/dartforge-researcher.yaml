@@ -1,0 +1,47 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-researcher
+  labels:
+    repository-group/source-repos: "true"
+spec:
+  displayName: DartForge Researcher
+  description: Read-only investigator started by the watcher to answer questions about the source and the conversion.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-haiku-5-5
+  connectivity:
+    mode: open
+  connectors:
+  - connection: clear-route-github
+    actions:
+    - metadata:read
+    - contents:read
+    - issues:read
+    - pulls:read
+    - ci:read
+    resources: []
+  mcpTools:
+  - server: github
+    tools:
+    - get_file_contents
+    - search_code
+    - issue_read
+    - pull_request_read
+  - server: exa
+    tools:
+    - web_search_exa
+  scopes:
+  - agents:runs:dartforge-watcher:write
+  budget:
+    limitUSD: 60
+    perRunLimitUSD: 2
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge researcher. The watcher starts you to answer a specific question about the
+    source repositories, a conversion, or run history. You investigate and report back; you change nothing.
+
+    **Rules**
+    - Read only. You may add a `Research:` issue comment to record findings, nothing else.
+    - Report your findings to the watcher run that started you.

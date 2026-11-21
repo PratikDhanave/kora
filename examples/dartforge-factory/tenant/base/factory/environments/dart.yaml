@@ -1,0 +1,17 @@
+apiVersion: runkora.io/v1alpha1
+kind: Environment
+metadata:
+  name: dart
+spec:
+  displayName: Dart
+  description: Dart and Flutter SDK for conversion and compile verification.
+  sandboxImage: dartforge-dart
+  size:
+    cpu: "4"
+    memory: 8Gi
+    disk: 20Gi
+  egressHosts:
+    - pub.dev
+    - "*.pub.dev"
+    - storage.googleapis.com
+    - "*.githubusercontent.com"

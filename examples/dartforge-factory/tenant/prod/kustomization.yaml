@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kora-tenant-dartforge
+
+resources:
+  - ../base
+  # The factory runs in prod only.
+  - ../base/factory
+  - sandbox-images
+  - ../../_common/prod/roles
+  - secrets.yaml
+
+patches:
+  # turns on every dartforge trigger in prod
+  - path: patches/triggers-enabled.yaml

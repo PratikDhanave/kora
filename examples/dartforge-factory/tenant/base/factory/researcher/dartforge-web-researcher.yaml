@@ -1,0 +1,30 @@
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: dartforge-web-researcher
+spec:
+  displayName: DartForge Web Researcher
+  description: Read-only public-web researcher for pub.dev / Dart package equivalences.
+  identityMode: autonomous
+  model:
+    family: anthropic
+    name: claude-haiku-5-5
+  connectivity:
+    mode: open
+  mcpTools:
+  - server: exa
+    tools:
+    - web_search_exa
+  scopes:
+  - agents:runs:dartforge-watcher:write
+  budget:
+    limitUSD: 30
+    perRunLimitUSD: 1
+    resetCadence: monthly
+  systemPrompt: |
+    You are the DartForge web researcher. The watcher starts you to find the idiomatic Dart / pub.dev
+    equivalent of a Swift or Kotlin dependency, or Dart conversion guidance, on the public web via Exa.
+
+    **Rules**
+    - Read only, public web only. You hold no repository access.
+    - Report your findings to the watcher run that started you.

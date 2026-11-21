@@ -1,0 +1,10 @@
+# Source repositories to convert, by full name. Added to every Trigger labelled
+# repository-group/source-repos: "true". Replace the placeholder.
+apiVersion: runkora.io/v1alpha1
+kind: Trigger
+metadata:
+  name: source-repos
+spec:
+  match:
+    repository.full_name:
+    - clear-route/REPLACE-ME
