@@ -177,6 +177,11 @@ export default function FactoryPage() {
   const [outputs, setOutputs] = useState<string[]>(FACTORIES[0].stages.map(() => ''));
   const [result, setResult] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Human-in-the-loop review gate: the pipeline pauses on its result until a
+  // human approves it or sends it back with feedback (which re-runs the chain).
+  const [decision, setDecision] = useState<'pending' | 'approved'>('pending');
+  const [wantsChanges, setWantsChanges] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   const selectFactory = useCallback((f: Factory) => {
     if (running) return;
@@ -186,6 +191,9 @@ export default function FactoryPage() {
     setOutputs(f.stages.map(() => ''));
     setResult('');
     setError(null);
+    setDecision('pending');
+    setWantsChanges(false);
+    setFeedback('');
   }, [running]);
 
   const onFiles = useCallback(async (list: FileList | null) => {
@@ -197,10 +205,12 @@ export default function FactoryPage() {
     setSource(parts.join('\n\n'));
   }, []);
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (humanFeedback?: string) => {
     setRunning(true);
     setError(null);
     setResult('');
+    setDecision('pending');
+    setWantsChanges(false);
     setStatuses(factory.stages.map(() => 'idle'));
     setOutputs(factory.stages.map(() => ''));
 
@@ -208,7 +218,12 @@ export default function FactoryPage() {
     try {
       for (let i = 0; i < factory.stages.length; i++) {
         setStatuses((s) => s.map((v, j) => (j === i ? 'running' : v)));
-        const text = await runStage(factory.stages[i].slug, factory.stages[i].task(source, prev));
+        const baseTask = factory.stages[i].task(source, prev);
+        const task =
+          i === 0 && humanFeedback
+            ? `${baseTask}\n\nAddress this reviewer feedback:\n${humanFeedback}`
+            : baseTask;
+        const text = await runStage(factory.stages[i].slug, task);
         setOutputs((o) => o.map((v, j) => (j === i ? text : v)));
         setStatuses((s) => s.map((v, j) => (j === i ? 'done' : v)));
         if (factory.stages[i].slug === factory.finalSlug) setResult(extractCode(text) || text.trim());
@@ -234,7 +249,7 @@ export default function FactoryPage() {
             </Text>
           </Stack>
         </Stack>
-        <Button onClick={run} disabled={running}>
+        <Button onClick={() => run()} disabled={running}>
           {running ? 'Running…' : 'Run factory'}
         </Button>
       </Stack>
@@ -322,6 +337,48 @@ export default function FactoryPage() {
           <Heading variant="subsection">Final output</Heading>
           <CodeBlock text={result} wrap />
         </Stack>
+      ) : null}
+
+      {/* Human-in-the-loop review gate */}
+      {result && !running ? (
+        decision === 'approved' ? (
+          <Stack direction="horizontal" align="center" gap="snug">
+            <Badge variant="healthy">Approved</Badge>
+            <Text size="supporting" color="muted">
+              You accepted this result.
+            </Text>
+          </Stack>
+        ) : (
+          <Stack gap="snug" maxWidth="prose">
+            <Heading variant="subsection">Your review</Heading>
+            <Text size="supporting" color="muted">
+              The agents ran — this is the human-in-the-loop gate. Approve the result, or send it
+              back to the pipeline with changes.
+            </Text>
+            <Stack direction="horizontal" gap="snug">
+              <Button onClick={() => setDecision('approved')}>Approve</Button>
+              <Button variant="ghost" onClick={() => setWantsChanges((v) => !v)}>
+                Request changes
+              </Button>
+            </Stack>
+            {wantsChanges ? (
+              <Stack gap="snug">
+                <Textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  rows={3}
+                  placeholder="What should change? This is fed back to the first stage on re-run."
+                  aria-label="Review feedback"
+                />
+                <Stack direction="horizontal">
+                  <Button onClick={() => run(feedback)} disabled={!feedback.trim()}>
+                    Re-run with your feedback
+                  </Button>
+                </Stack>
+              </Stack>
+            ) : null}
+          </Stack>
+        )
       ) : null}
     </Stack>
   );
