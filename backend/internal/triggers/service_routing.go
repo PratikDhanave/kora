@@ -39,8 +39,7 @@ func (h *holdForStartingRun) Error() string { return "run " + h.runID + " is sta
 // held reports a fire returned to the queue to wait for a starting run.
 func (s *Service) dispatchRouted(ctx, dispatchCtx context.Context, t Trigger, p PendingDelivery) (held bool) {
 	d, runID, err := s.route(dispatchCtx, t, p)
-	var hold *holdForStartingRun
-	if errors.As(err, &hold) {
+	if hold, ok := errors.AsType[*holdForStartingRun](err); ok {
 		reason := fmt.Sprintf("waiting for run %s to start before joining it (hold %d of %d)", hold.runID, p.HoldCount+1, startingRunHolds)
 		holdErr := s.repo.HoldPending(ctx, p.ID, p.DeliveryID, startingRunHoldDelay, reason)
 		if holdErr == nil {
@@ -139,8 +138,7 @@ func (s *Service) route(ctx context.Context, t Trigger, p PendingDelivery) (*Rou
 		d.JoinKey = &key
 		if r.joins() {
 			joined, joinErr := s.joinByKey(ctx, t, tok, prompt, key, p.HoldCount, d)
-			var hold *holdForStartingRun
-			if errors.As(joinErr, &hold) {
+			if _, ok := errors.AsType[*holdForStartingRun](joinErr); ok {
 				return nil, "", joinErr
 			}
 			if joined || joinErr != nil {

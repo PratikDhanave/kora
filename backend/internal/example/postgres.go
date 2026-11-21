@@ -105,8 +105,7 @@ func (r *PostgresRepository) CreateUsers(ctx context.Context, users []*User) err
 
 // isDuplicateKeyError reports whether err is a Postgres unique_violation (23505).
 func isDuplicateKeyError(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.Code == "23505"
 	}
 	return false

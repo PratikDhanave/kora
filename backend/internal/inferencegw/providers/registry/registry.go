@@ -63,8 +63,7 @@ func buildConnector(ctx context.Context, p *ip.InferenceProvider, secret secretR
 	}
 	conn, err := build(ctx, p.Spec, &info, secret, logger)
 	if err != nil {
-		var be *buildError
-		if !errors.As(err, &be) {
+		if _, ok := errors.AsType[*buildError](err); !ok {
 			err = &buildError{Reason: reasonBuildFailed, Message: err.Error()}
 		}
 		info.BuildError = err.Error()

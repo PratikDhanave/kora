@@ -66,8 +66,7 @@ func TestNewRedisTLSAgainstPlaintextUnavailable(t *testing.T) {
 		t.Fatal("TLS to a plaintext Redis must leave the client unavailable")
 	}
 	err = rc.Health(ctx)
-	var rh tls.RecordHeaderError
-	if !errors.As(err, &rh) {
+	if _, ok := errors.AsType[tls.RecordHeaderError](err); !ok {
 		t.Errorf("health error %q is not a TLS handshake failure", err)
 	}
 }

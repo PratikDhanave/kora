@@ -104,7 +104,7 @@ func (m *Mux) HandleWithMiddleware(
 	// Split route into method and path
 	// Routes must follow "METHOD /path" format (enforced by ServeMux)
 	// This split is safe because invalid formats will fail at ServeMux.HandleFunc
-	method := strings.Split(route, " ")[0]
+	method, _, _ := strings.Cut(route, " ")
 	path := strings.Split(route, " ")[1]
 
 	// create our grouped route

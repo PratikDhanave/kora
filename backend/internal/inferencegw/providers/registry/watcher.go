@@ -205,8 +205,7 @@ func (w *Watcher) writeStatus(ctx context.Context, p *ip.InferenceProvider, load
 	cond := metav1.Condition{Type: conditionLoaded, Status: metav1.ConditionTrue, Reason: reasonLoaded,
 		Message: "loaded by the inference gateway", ObservedGeneration: p.Generation}
 	next.Status.Phase = ip.PhaseReady
-	var be *buildError
-	if errors.As(loadErr, &be) {
+	if be, ok := errors.AsType[*buildError](loadErr); ok {
 		cond.Status, cond.Reason, cond.Message = metav1.ConditionFalse, be.Reason, be.Message
 		next.Status.Phase = ip.PhaseInvalid
 	}

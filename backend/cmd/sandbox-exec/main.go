@@ -164,8 +164,7 @@ func (s *execServer) Execute(req *execpb.ExecuteRequest, stream grpc.ServerStrea
 
 	exitCode := 0
 	if err := cmd.Wait(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			exitCode = exitErr.ExitCode()
 		} else {
 			return err

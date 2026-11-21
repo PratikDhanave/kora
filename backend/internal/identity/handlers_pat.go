@@ -87,8 +87,7 @@ func (c *Controller) handleCreatePAT(w http.ResponseWriter, r *http.Request) {
 	req.Name = name
 	resp, err := c.svc.CreatePAT(ctx, claims.Kora.TenantID, claims.Subject, claims, req)
 	if err != nil {
-		var scopeErr *ErrPATScopesForbiddenError
-		if errors.As(err, &scopeErr) {
+		if scopeErr, ok := errors.AsType[*ErrPATScopesForbiddenError](err); ok {
 			api.ErrorResponse(ctx, w, c.logger,
 				api.ForbiddenError(api.ErrCodeForbidden, scopeErr.Error(), map[string]any{"scopes": scopeErr.Scopes}), nil)
 			return

@@ -264,8 +264,7 @@ func (s *Service) InitiateDeviceAuth(ctx context.Context, req DeviceAuthRequest)
 		oauthErr := parseDeviceTokenError(body)
 		if oauthErr != nil {
 			// If it's an OAuthError, include the error code
-			var oe *OAuthError
-			if errors.As(oauthErr, &oe) {
+			if oe, ok := errors.AsType[*OAuthError](oauthErr); ok {
 				return nil, fmt.Errorf("device auth endpoint %s returned %d (%s): %w",
 					ts.meta.DeviceAuthorizationEndpoint, resp.StatusCode, oe.Code, oauthErr)
 			}
@@ -1360,8 +1359,7 @@ func recordDeviceAuthError(span trace.Span, err error) {
 	case errors.Is(err, ErrDeviceCodeExpired):
 		span.SetStatus(codes.Error, "expired_token")
 	default:
-		var oe *OAuthError
-		if errors.As(err, &oe) {
+		if oe, ok := errors.AsType[*OAuthError](err); ok {
 			span.SetAttributes(attribute.String("oauth.error", oe.Code))
 			span.SetStatus(codes.Error, oe.Code)
 		}

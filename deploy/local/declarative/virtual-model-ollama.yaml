@@ -1,0 +1,40 @@
+# Catalog model served as ollama/phi4, routed to the local Ollama provider.
+# Requires inference-provider-ollama.yaml. The policy scope minted from this is
+# inference:ollama:phi4:use. Call it with model "ollama/phi4".
+apiVersion: runkora.io/v1alpha1
+kind: VirtualModel
+metadata:
+  name: ollama-phi4
+  namespace: kora-system
+  annotations:
+    runkora.io/repository: github.com/runkora/kora
+spec:
+  family: ollama
+  name: phi4
+  displayName: Phi-4 (Ollama local)
+  description: Microsoft Phi-4 served by local host Ollama. Declared in deploy/local/declarative.
+  strategy: priority
+  routes:
+    - provider: compatible:ollama
+      modelID: phi4:latest
+      priority: 1
+---
+# Tool-capable model for driving agents (the claude-code harness requires tool
+# calling, which phi4 lacks). Served as ollama/qwen3.
+apiVersion: runkora.io/v1alpha1
+kind: VirtualModel
+metadata:
+  name: ollama-qwen3
+  namespace: kora-system
+  annotations:
+    runkora.io/repository: github.com/runkora/kora
+spec:
+  family: ollama
+  name: qwen3
+  displayName: Qwen3 (Ollama local)
+  description: Qwen3.6 served by local host Ollama. Tool-capable; drives agents. Declared in deploy/local/declarative.
+  strategy: priority
+  routes:
+    - provider: compatible:ollama
+      modelID: qwen3.6:latest
+      priority: 1

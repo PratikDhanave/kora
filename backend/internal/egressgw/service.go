@@ -91,8 +91,7 @@ func (b *Broker) Authorize(ctx context.Context, claims *token.PlatformClaims, re
 	tenantID := claims.Kora.TenantID
 
 	conn, registered, err := b.resolveConnection(ctx, claims, req)
-	var unresolved *Denial
-	if errors.As(err, &unresolved) {
+	if unresolved, ok := errors.AsType[*Denial](err); ok {
 		span.RecordError(err)
 		return b.unresolvedConnection(ctx, span, claims, req, unresolved)
 	}

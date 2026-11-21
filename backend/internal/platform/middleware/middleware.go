@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"slices"
 )
 
 type MiddlewareHandler func(http.Handler) http.Handler
@@ -23,8 +24,8 @@ func MiddlewareChain(middleware ...Middleware) MiddlewareHandler {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			})
 		}
-		for i := len(middleware) - 1; i >= 0; i-- {
-			next = middleware[i].next(next)
+		for _, m := range slices.Backward(middleware) {
+			next = m.next(next)
 		}
 		return next
 	}

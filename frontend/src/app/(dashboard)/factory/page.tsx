@@ -1,9 +1,9 @@
 'use client';
 
-// The DartForge factory console. Chains four agents — Classifier -> Converter ->
-// Compile Verifier -> Code Reviewer — one after another, feeding each stage's output
-// into the next, and shows the final Dart. The chaining runs in the browser (the local
-// control plane does not auto-wire agent runs), but every stage is a real agent run.
+// Multi-factory console. Pick a factory (DartForge Converter or ETL Pipeline Builder);
+// the page chains that factory's agents one after another, feeding each stage's output into
+// the next, and shows the final result. Chaining runs in the browser (the local control plane
+// has no run-event trigger chaining), but every stage is a real agent run.
 
 import { useCallback, useState } from 'react';
 
@@ -14,13 +14,14 @@ import {
   Heading,
   Icon,
   type IconName,
+  Input,
   Stack,
   StatusDot,
   Text,
   Textarea,
 } from '@runkora/hades';
 
-/** @tier 3 — factory-section page. Orchestrates the DartForge agent chain client-side. */
+/** @tier 3 — factory-section page. Orchestrates factory agent chains client-side. */
 
 type StageStatus = 'idle' | 'running' | 'done' | 'error';
 
@@ -29,51 +30,92 @@ type Stage = {
   name: string;
   icon: IconName;
   blurb: string;
-  // Builds the message for this stage from the original source and the previous stage's output.
   task: (source: string, prev: string) => string;
 };
 
-const STAGES: Stage[] = [
-  {
-    slug: 'dartforge-classifier',
-    name: 'Classifier',
-    icon: 'search',
-    blurb: 'Detects the source language and confirms the request is convertible.',
-    task: (source) =>
-      `Classify this code-conversion request. State the source language (Swift or Kotlin), ` +
-      `an estimated size, and confirm it is convertible.\n\nSource:\n${source}`,
-  },
-  {
-    slug: 'dartforge-converter',
-    name: 'Converter',
-    icon: 'bot',
-    blurb: 'Translates the source into idiomatic, null-safe Dart.',
-    task: (source) => `Convert this Swift or Kotlin to idiomatic Dart:\n\n${source}`,
-  },
-  {
-    slug: 'dartforge-verifier',
-    name: 'Compile Verifier',
-    icon: 'check-circle',
-    blurb: 'Checks the Dart is well-formed and would compile.',
-    task: (_source, prev) =>
-      `Verify this converted Dart compiles and is well-formed. Report PASS or FAIL with any fixes:\n\n${prev}`,
-  },
-  {
-    slug: 'dartforge-reviewer',
-    name: 'Code Reviewer',
-    icon: 'shield-check',
-    blurb: 'Reviews the conversion for fidelity to the source and Dart idiom.',
-    task: (source, prev) =>
-      `Review this Swift/Kotlin to Dart conversion for fidelity and Dart idiom. List findings by severity.\n\n` +
-      `SOURCE:\n${source}\n\nDART:\n${prev}`,
-  },
-];
+type Factory = {
+  id: string;
+  name: string;
+  icon: IconName;
+  blurb: string;
+  inputLabel: string;
+  sample: string;
+  /** When set, offer a file picker that loads these extensions into the input. */
+  fileAccept?: string;
+  stages: Stage[];
+  /** Slug of the stage whose fenced code block is the deliverable. */
+  finalSlug: string;
+};
 
-const SAMPLE = `struct Temperature {
+const SWIFT_SAMPLE = `struct Temperature {
     let celsius: Double
     var fahrenheit: Double { return celsius * 9/5 + 32 }
     func isFreezing() -> Bool { return celsius <= 0 }
 }`;
+
+const ETL_SAMPLE = `Source: a CSV of raw orders with columns
+  order_id (int), customer_email (string), amount_cents (int), created_at (unix epoch).
+Target: a clean "orders" table with
+  id (int), email (lowercased), amount_dollars (decimal), created_date (ISO date).
+Rules: dedupe by order_id, drop rows with a null email, amount_dollars = amount_cents / 100.`;
+
+const FACTORIES: Factory[] = [
+  {
+    id: 'dartforge',
+    name: 'DartForge Converter',
+    icon: 'factory',
+    blurb: 'Convert Swift / Kotlin / Java into idiomatic Dart, then review it.',
+    inputLabel: 'Swift / Kotlin / Java source',
+    sample: SWIFT_SAMPLE,
+    fileAccept: '.swift,.kt,.kts,.java',
+    finalSlug: 'dartforge-converter',
+    stages: [
+      {
+        slug: 'dartforge-converter',
+        name: 'Converter',
+        icon: 'bot',
+        blurb: 'Translates the source into idiomatic, null-safe Dart.',
+        task: (source) => `Convert this Swift, Kotlin or Java to idiomatic Dart:\n\n${source}`,
+      },
+      {
+        slug: 'dartforge-reviewer',
+        name: 'Code Reviewer',
+        icon: 'shield-check',
+        blurb: 'Reviews the conversion for fidelity to the source and Dart idiom.',
+        task: (source, prev) =>
+          `Review this conversion for fidelity and Dart idiom. List findings by severity.\n\n` +
+          `SOURCE:\n${source}\n\nDART:\n${prev}`,
+      },
+    ],
+  },
+  {
+    id: 'etl',
+    name: 'ETL Pipeline Builder',
+    icon: 'layers',
+    blurb: 'Design a data pipeline from a spec, then generate runnable code.',
+    inputLabel: 'Describe the data flow (source, target, transforms)',
+    sample: ETL_SAMPLE,
+    finalSlug: 'etl-generator',
+    stages: [
+      {
+        slug: 'etl-designer',
+        name: 'Designer',
+        icon: 'search',
+        blurb: 'Infers the schemas and designs the field mappings and transforms.',
+        task: (source) => `Design an ETL pipeline for this data flow:\n\n${source}`,
+      },
+      {
+        slug: 'etl-generator',
+        name: 'Generator',
+        icon: 'braces',
+        blurb: 'Generates a runnable pipeline (SQL, pandas or PySpark) and self-validates.',
+        task: (source, prev) =>
+          `Generate a runnable ETL pipeline from this design. Choose the tech from the spec.\n\n` +
+          `DESIGN:\n${prev}\n\nORIGINAL SPEC:\n${source}`,
+      },
+    ],
+  },
+];
 
 const STATUS_DOT: Record<StageStatus, 'idle' | 'pending' | 'healthy' | 'error'> = {
   idle: 'idle',
@@ -81,9 +123,10 @@ const STATUS_DOT: Record<StageStatus, 'idle' | 'pending' | 'healthy' | 'error'> 
   done: 'healthy',
   error: 'error',
 };
+const BADGE: Record<StageStatus, 'idle' | 'pending' | 'healthy' | 'error'> = STATUS_DOT;
 
-// Starts a run on the agent (by slug) and resolves with its final assistant text.
-// Uses the same-origin SSE events route (cookie-authenticated) to read the result.
+// Starts a run on the agent (by slug) and resolves with its final assistant text,
+// read over the same-origin SSE events route (cookie-authenticated).
 async function runStage(slug: string, task: string): Promise<string> {
   const res = await fetch(`/api/agents/types/${slug}/runs`, {
     method: 'POST',
@@ -115,45 +158,61 @@ async function runStage(slug: string, task: string): Promise<string> {
         finish('');
       }
     });
-    // EventSource auto-reconnects on transient errors; only fail if it never opened.
     es.addEventListener('error', () => {
       if (es.readyState === EventSource.CLOSED) finish(undefined, new Error('event stream closed'));
     });
   });
 }
 
-// Pulls the first ```dart fenced block out of the converter's reply, if present.
-function extractDart(text: string): string {
-  const m = text.match(/```(?:dart)?\n([\s\S]*?)```/);
-  return m ? m[1].trim() : text.trim();
+function extractCode(text: string): string {
+  const m = text.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+  return m ? m[1].trim() : '';
 }
 
 export default function FactoryPage() {
-  const [source, setSource] = useState(SAMPLE);
+  const [factory, setFactory] = useState<Factory>(FACTORIES[0]);
+  const [source, setSource] = useState(FACTORIES[0].sample);
   const [running, setRunning] = useState(false);
-  const [statuses, setStatuses] = useState<StageStatus[]>(STAGES.map(() => 'idle'));
-  const [outputs, setOutputs] = useState<string[]>(STAGES.map(() => ''));
-  const [dart, setDart] = useState('');
+  const [statuses, setStatuses] = useState<StageStatus[]>(FACTORIES[0].stages.map(() => 'idle'));
+  const [outputs, setOutputs] = useState<string[]>(FACTORIES[0].stages.map(() => ''));
+  const [result, setResult] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const selectFactory = useCallback((f: Factory) => {
+    if (running) return;
+    setFactory(f);
+    setSource(f.sample);
+    setStatuses(f.stages.map(() => 'idle'));
+    setOutputs(f.stages.map(() => ''));
+    setResult('');
+    setError(null);
+  }, [running]);
+
+  const onFiles = useCallback(async (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    const files = Array.from(list);
+    const parts = await Promise.all(
+      files.map(async (f) => `// ===== ${f.name} =====\n${await f.text()}`),
+    );
+    setSource(parts.join('\n\n'));
+  }, []);
 
   const run = useCallback(async () => {
     setRunning(true);
     setError(null);
-    setDart('');
-    setStatuses(STAGES.map(() => 'idle'));
-    setOutputs(STAGES.map(() => ''));
+    setResult('');
+    setStatuses(factory.stages.map(() => 'idle'));
+    setOutputs(factory.stages.map(() => ''));
 
     let prev = '';
     try {
-      for (let i = 0; i < STAGES.length; i++) {
+      for (let i = 0; i < factory.stages.length; i++) {
         setStatuses((s) => s.map((v, j) => (j === i ? 'running' : v)));
-        const text = await runStage(STAGES[i].slug, STAGES[i].task(source, prev));
+        const text = await runStage(factory.stages[i].slug, factory.stages[i].task(source, prev));
         setOutputs((o) => o.map((v, j) => (j === i ? text : v)));
         setStatuses((s) => s.map((v, j) => (j === i ? 'done' : v)));
-        if (STAGES[i].slug === 'dartforge-converter') {
-          prev = extractDart(text);
-          setDart(prev);
-        }
+        if (factory.stages[i].slug === factory.finalSlug) setResult(extractCode(text) || text.trim());
+        prev = text;
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'the factory run failed');
@@ -161,7 +220,7 @@ export default function FactoryPage() {
     } finally {
       setRunning(false);
     }
-  }, [source]);
+  }, [factory, source]);
 
   return (
     <Stack gap="relaxed" paddingBlock="relaxed" paddingInline="relaxed">
@@ -171,7 +230,7 @@ export default function FactoryPage() {
           <Stack gap="none">
             <Heading variant="title">Factory</Heading>
             <Text size="supporting" color="muted">
-              Classifier → Converter → Compile Verifier → Code Reviewer, run one after another.
+              Chain agents into a pipeline that runs one after another to a final output.
             </Text>
           </Stack>
         </Stack>
@@ -180,25 +239,59 @@ export default function FactoryPage() {
         </Button>
       </Stack>
 
+      {/* Factory selector */}
+      <Stack direction="horizontal" gap="snug">
+        {FACTORIES.map((f) => (
+          <Button
+            key={f.id}
+            variant={f.id === factory.id ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => selectFactory(f)}
+            disabled={running}
+          >
+            <Icon name={f.icon} size="xs" />
+            {f.name}
+          </Button>
+        ))}
+      </Stack>
+      <Text size="supporting" color="muted">
+        {factory.blurb}
+      </Text>
+
+      {/* Input */}
       <Stack gap="snug" maxWidth="prose">
         <Text size="supporting" color="muted" mono>
-          Swift or Kotlin source
+          {factory.inputLabel}
         </Text>
         <Textarea
           value={source}
           onChange={(e) => setSource(e.target.value)}
-          rows={6}
+          rows={7}
           disabled={running}
-          aria-label="Source code to convert"
+          aria-label={factory.inputLabel}
         />
+        {factory.fileAccept ? (
+          <Stack gap="none">
+            <Text size="supporting" color="muted">
+              …or load a folder of source files:
+            </Text>
+            <Input
+              type="file"
+              multiple
+              accept={factory.fileAccept}
+              onChange={(e) => void onFiles(e.target.files)}
+              disabled={running}
+              aria-label="Load source files"
+            />
+          </Stack>
+        ) : null}
       </Stack>
 
-      {error ? (
-        <Badge variant="error">{error}</Badge>
-      ) : null}
+      {error ? <Badge variant="error">{error}</Badge> : null}
 
+      {/* Pipeline */}
       <Stack gap="snug">
-        {STAGES.map((stage, i) => (
+        {factory.stages.map((stage, i) => (
           <Stack key={stage.slug} gap="snug">
             <Stack direction="horizontal" align="center" gap="comfortable">
               <StatusDot status={STATUS_DOT[statuses[i]]} />
@@ -206,18 +299,7 @@ export default function FactoryPage() {
               <Stack gap="none">
                 <Stack direction="horizontal" align="center" gap="snug">
                   <Text weight="heavy">{stage.name}</Text>
-                  <Badge
-                    size="sm"
-                    variant={
-                      statuses[i] === 'done'
-                        ? 'healthy'
-                        : statuses[i] === 'running'
-                          ? 'pending'
-                          : statuses[i] === 'error'
-                            ? 'error'
-                            : 'idle'
-                    }
-                  >
+                  <Badge size="sm" variant={BADGE[statuses[i]]}>
                     {statuses[i]}
                   </Badge>
                 </Stack>
@@ -235,10 +317,10 @@ export default function FactoryPage() {
         ))}
       </Stack>
 
-      {dart ? (
+      {result ? (
         <Stack gap="snug">
-          <Heading variant="subsection">Final Dart</Heading>
-          <CodeBlock text={dart} wrap />
+          <Heading variant="subsection">Final output</Heading>
+          <CodeBlock text={result} wrap />
         </Stack>
       ) : null}
     </Stack>

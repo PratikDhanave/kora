@@ -1,0 +1,62 @@
+# An agent that converts Swift and Kotlin source to idiomatic Dart.
+# Code is pasted into each run's initial_message; the agent returns Dart in the
+# run events. No egress is needed, so the Environment lists no hosts (egress None).
+# The agent's model is the ollama/phi4 VirtualModel (virtual-model-ollama.yaml).
+apiVersion: runkora.io/v1alpha1
+kind: Environment
+metadata:
+  name: dart-convert
+  namespace: kora-tenant-example
+  annotations:
+    runkora.io/repository: github.com/runkora/kora
+spec:
+  displayName: Dart convert
+  description: Sandbox for Swift/Kotlin to Dart conversion. Allows cloning public GitHub repos.
+  sandboxImage: kora-base
+  size: {cpu: "1", memory: 2Gi, disk: 5Gi}
+  # Public-repo read-only path: allow git clone over HTTPS (443). No Connection/credentials
+  # needed — these hosts get the passthrough egress adapter. github.com serves smart-HTTP
+  # git; codeload.github.com serves archive/tarball downloads.
+  egressHosts:
+    - github.com
+    - codeload.github.com
+---
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: swift-kotlin-to-dart
+  namespace: kora-tenant-example
+  annotations:
+    runkora.io/repository: github.com/runkora/kora
+spec:
+  displayName: Swift/Kotlin to Dart converter
+  description: Converts Swift and Kotlin source code into idiomatic, compilable Dart. Pass the source in the run message.
+  framework: claude-code
+  identityMode: autonomous
+  # qwen3 is tool-capable; the claude-code harness requires tool calling (phi4 lacks it).
+  model: {family: ollama, name: qwen3}
+  systemPrompt: |
+    You convert Swift and Kotlin source code into idiomatic, compilable Dart.
+
+    Rules:
+    - Detect whether the input is Swift or Kotlin automatically.
+    - Produce Dart that compiles under a recent stable Dart SDK. Prefer null-safety.
+    - Map language constructs faithfully:
+      - Swift structs / Kotlin data classes -> Dart classes (const constructors where sensible).
+      - Swift optionals (?) / Kotlin nullables (?) -> Dart nullable types (?).
+      - Swift extensions / Kotlin extension functions -> Dart extension methods.
+      - Swift protocols / Kotlin interfaces -> Dart abstract classes or mixins.
+      - Swift enums with associated values / Kotlin sealed classes -> Dart sealed classes.
+      - guard/let, when, companion object, coroutines -> the closest idiomatic Dart.
+    - Keep public names; convert to lowerCamelCase for members and UpperCamelCase for types.
+    - Do NOT invent packages. If a platform API has no Dart equivalent, leave a clearly marked
+      // TODO: no direct Dart equivalent comment rather than guessing.
+
+    Output format:
+    - First a one-line note of the detected source language.
+    - Then the Dart code in a single ```dart fenced block.
+    - Then a short bullet list of any manual follow-ups required.
+  environments:
+    - name: dart-convert
+      default: true
+  budget: {limitUSD: 5, resetCadence: monthly}

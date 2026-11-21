@@ -1041,8 +1041,7 @@ func isRetryableSessionError(err error) bool {
 	if errors.Is(err, sessionmanager.ErrSessionConflict) {
 		return false
 	}
-	var statusErr *sessionmanager.StatusError
-	if errors.As(err, &statusErr) {
+	if statusErr, ok := errors.AsType[*sessionmanager.StatusError](err); ok {
 		return statusErr.StatusCode == http.StatusServiceUnavailable
 	}
 	var netErr net.Error

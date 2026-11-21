@@ -82,8 +82,8 @@ type mockRepository struct {
 func (m *mockRepository) LatestJoinKeyRun(_ context.Context, tenantID, triggerID, joinKey string) (string, string, bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for i := len(m.decisions) - 1; i >= 0; i-- {
-		d := m.decisions[i]
+	for _, d := range slices.Backward(m.decisions) {
+
 		if d.TenantID == tenantID && d.TriggerID == triggerID && d.JoinKey != nil && *d.JoinKey == joinKey && d.RunID != nil {
 			return *d.RunID, deref(d.AgentTypeID), true, nil
 		}

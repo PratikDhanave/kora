@@ -1552,8 +1552,7 @@ func (s *Service) logProviderError(ctx context.Context, model string, err error)
 	fields := []logging.Field{
 		{Key: "model", Value: model},
 	}
-	var connErr *ConnectorError
-	if errors.As(err, &connErr) {
+	if connErr, ok := errors.AsType[*ConnectorError](err); ok {
 		fields = append(fields,
 			logging.Field{Key: "provider", Value: string(connErr.Provider)},
 			logging.Field{Key: "error_code", Value: connErr.Code},
@@ -1572,8 +1571,7 @@ func extractErrorCode(err error) string {
 	if err == nil {
 		return ""
 	}
-	var connErr *ConnectorError
-	if errors.As(err, &connErr) {
+	if connErr, ok := errors.AsType[*ConnectorError](err); ok {
 		return connErr.Code
 	}
 	return "UNKNOWN"

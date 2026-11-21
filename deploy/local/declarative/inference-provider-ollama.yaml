@@ -1,0 +1,22 @@
+# Local host Ollama, registered as a `compatible` (OpenAI-compatible) provider.
+# host.k3d.internal resolves to the Docker Desktop host gateway; `make up`
+# already opens port 11434 in the gateway NetworkPolicy (see
+# deploy/reference/environments/local.generated.yaml). Ollama needs no API key.
+# Omitting spec.models offers every model the endpoint lists via /v1/models.
+apiVersion: runkora.io/v1alpha1
+kind: InferenceProvider
+metadata:
+  name: ollama
+  namespace: kora-system
+  annotations:
+    runkora.io/repository: github.com/runkora/kora
+spec:
+  type: compatible
+  displayName: Ollama (local host)
+  compatible:
+    baseURL: http://host.k3d.internal:11434/v1
+    apis:
+      - chatCompletions
+      - responses
+      - embeddings
+      - messages

@@ -217,8 +217,7 @@ func scanIssuanceRow(row pgx.Row) (*DelegationIssuance, error) {
 // unique_violation (SQLSTATE 23505) — the partial unique index on
 // (run_id) WHERE revoked_at IS NULL.
 func isDelegationUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.SQLState() == "23505"
 	}
 	return false
