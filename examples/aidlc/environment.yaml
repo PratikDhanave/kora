@@ -1,0 +1,70 @@
+# Production path: the AI-DLC CLI running inside a governed kora sandbox.
+#
+# This is the "all workflows" integration — a kora `claude-code` agent in a sandbox that carries
+# the `aidlc` binary gets the full AI-DLC life cycle (all phases, all profiles) via `/aidlc`, while
+# kora enforces who it is, what it can touch, and how it connects. The local prototype runs a
+# text-only variant of this agent (methodology-in-prompt, no sandbox) so it fits a laptop; swap in
+# these manifests on a real cluster with a capable model.
+
+apiVersion: runkora.io/v1alpha1
+kind: SandboxImage
+metadata:
+  name: aidlc-sandbox
+spec:
+  description: kora-sandbox-base plus the AI-DLC CLI (awslabs/aidlc-workflows), for governed AI-DLC runs.
+  # Build examples/aidlc/Dockerfile FROM kora-sandbox-base, push to your registry, pin the digest.
+  image: REPLACE-WITH-REGISTRY/aidlc-sandbox:REPLACE-WITH-SHA
+  pullSecretRef:
+    name: ecr-pull
+  warm: true
+---
+apiVersion: runkora.io/v1alpha1
+kind: Environment
+metadata:
+  name: aidlc
+  namespace: kora-tenant-example
+spec:
+  displayName: AI-DLC
+  description: AI-DLC CLI sandbox. The agent runs `aidlc config --harness claude` on first use, then `/aidlc`.
+  sandboxImage: aidlc-sandbox
+  size:
+    cpu: "4"
+    memory: 8Gi
+    disk: 20Gi
+  # github.com / release assets so the harness can self-check; add the repos the workflows touch.
+  egressHosts:
+    - github.com
+    - api.github.com
+    - objects.githubusercontent.com
+    - "*.githubusercontent.com"
+  # A GitHub Connection lets AI-DLC open PRs with credentials brokered by kora (never handled by the agent).
+  # connectors:
+  #   - name: github
+---
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: aidlc-sandboxed
+  namespace: kora-tenant-example
+spec:
+  displayName: AI-DLC Workflow (sandboxed)
+  description: Drives the AI-DLC life cycle via the aidlc CLI inside a governed sandbox.
+  framework: claude-code
+  identityMode: autonomous
+  # AI-DLC's 33 stages need a capable model; use a frontier model in production. The local
+  # prototype uses ollama/qwen3, which is fine for a methodology demo but not the full CLI run.
+  model: {family: bedrock, name: claude-sonnet-4-5-20250929-v1}
+  environments:
+    - name: aidlc
+      default: true
+  budget: {limitUSD: 25, resetCadence: monthly}
+  systemPrompt: |
+    You run the AI-DLC (AI-Driven Life Cycle) methodology inside this governed kora sandbox.
+
+    On your first action in a fresh workspace, configure the harness and self-check:
+        aidlc config --harness claude && aidlc doctor
+    Then drive the work request through the AI-DLC phases with `/aidlc <request>`, honouring the
+    approval gates between phases — stop and surface the plan before you implement.
+
+    Everything you do is policy-checked and every outbound call has its credentials brokered by
+    kora; never attempt to handle credentials yourself.

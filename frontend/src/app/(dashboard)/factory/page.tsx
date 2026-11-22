@@ -31,6 +31,12 @@ type Stage = {
   icon: IconName;
   blurb: string;
   task: (source: string, prev: string) => string;
+  /** Agent slug to run; defaults to `slug`. Lets several display stages share one agent. */
+  agent?: string;
+  /** Live agent slug to actually execute against, when it differs from the logical `agent`. */
+  executor?: string;
+  /** Role agents composed under this stage (shown as the phase's roster). */
+  roster?: string[];
 };
 
 type Factory = {
@@ -43,8 +49,10 @@ type Factory = {
   /** When set, offer a file picker that loads these extensions into the input. */
   fileAccept?: string;
   stages: Stage[];
-  /** Slug of the stage whose fenced code block is the deliverable. */
+  /** Slug of the stage whose output is the deliverable. */
   finalSlug: string;
+  /** When true, the deliverable is the final stage's full text, not an extracted code block. */
+  finalFullText?: boolean;
 };
 
 const SWIFT_SAMPLE = `struct Temperature {
@@ -112,6 +120,84 @@ const FACTORIES: Factory[] = [
         task: (source, prev) =>
           `Generate a runnable ETL pipeline from this design. Choose the tech from the spec.\n\n` +
           `DESIGN:\n${prev}\n\nORIGINAL SPEC:\n${source}`,
+      },
+    ],
+  },
+  {
+    // The full AI-DLC roster (awslabs/aidlc-workflows) as a phase-grouped factory: 14 role agents
+    // across the 5 AI-DLC phases (see examples/aidlc/agents.yaml). On a real cluster each phase
+    // routes to its own agents; on the laptop every stage executes against the single live `aidlc`
+    // agent (executor), with each phase's role roster shown and a human gate on the final output.
+    id: 'aidlc',
+    name: 'AI-DLC Pipeline',
+    icon: 'route',
+    blurb:
+      'The full AI-DLC life cycle — 14 kora-governed agents across 5 phases: Initialization → Ideation → Inception → Construction → Operation.',
+    inputLabel: 'Describe the work request (a feature, a fix, an integration)',
+    sample:
+      'Add a /healthz endpoint to our Go service that checks the Postgres connection and ' +
+      'returns 200 with {"status":"ok"} or 503 with the failing dependency. Include a unit test.',
+    finalSlug: 'aidlc-operation',
+    finalFullText: true,
+    stages: [
+      {
+        slug: 'aidlc-initialization',
+        executor: 'aidlc',
+        name: 'Initialization',
+        icon: 'route',
+        blurb: 'The composer reads the request, picks the AI-DLC scope, and plans the stages.',
+        roster: ['composer'],
+        task: (source) =>
+          `AI-DLC INITIALIZATION. As the composer, read this work request, choose the AI-DLC scope ` +
+          `(feature / bugfix / refactor / infra / security-patch / poc / mvp / express / classic / ` +
+          `enterprise / workshop) and justify it, then outline the stages.\n\nWORK REQUEST:\n${source}`,
+      },
+      {
+        slug: 'aidlc-ideation',
+        executor: 'aidlc',
+        name: 'Ideation',
+        icon: 'search',
+        blurb: 'Product-lead frames intent & outcomes; product derives requirements + acceptance criteria.',
+        roster: ['product-lead', 'product'],
+        task: (source, prev) =>
+          `AI-DLC IDEATION. Given the scope plan, frame the intent (problem, users, outcome, success ` +
+          `measures), then derive numbered, testable requirements and acceptance criteria.\n\n` +
+          `SCOPE PLAN:\n${prev}\n\nWORK REQUEST:\n${source}`,
+      },
+      {
+        slug: 'aidlc-inception',
+        executor: 'aidlc',
+        name: 'Inception',
+        icon: 'layers',
+        blurb: 'Architect + design produce the design; the architecture-reviewer reviews it adversarially.',
+        roster: ['architect', 'design', 'architecture-reviewer'],
+        task: (source, prev) =>
+          `AI-DLC INCEPTION. Design the system (components, data flow, key decisions, trade-offs), take ` +
+          `it to detailed design (interfaces, data models, contracts), then review it adversarially ` +
+          `against the requirements. Trace each decision to a requirement.\n\nREQUIREMENTS:\n${prev}`,
+      },
+      {
+        slug: 'aidlc-construction',
+        executor: 'aidlc',
+        name: 'Construction',
+        icon: 'braces',
+        blurb: 'Developer builds; quality designs tests; devsecops, compliance & aws-platform harden it.',
+        roster: ['developer', 'quality', 'devsecops', 'compliance', 'aws-platform'],
+        task: (source, prev) =>
+          `AI-DLC CONSTRUCTION. Implement the approved design (plan + core code), design the tests that ` +
+          `prove each acceptance criterion, and note the security, compliance and platform concerns.\n\n` +
+          `DESIGN:\n${prev}`,
+      },
+      {
+        slug: 'aidlc-operation',
+        executor: 'aidlc',
+        name: 'Operation',
+        icon: 'rocket',
+        blurb: 'Pipeline-deploy, delivery & operations ship it: CI/CD, rollout, observability, rollback.',
+        roster: ['pipeline-deploy', 'delivery', 'operations'],
+        task: (source, prev) =>
+          `AI-DLC OPERATION. Produce the CI/CD pipeline, the rollout strategy with a rollback trigger, ` +
+          `and the observability + runbook tied to the acceptance criteria.\n\nBUILD:\n${prev}`,
       },
     ],
   },
@@ -223,10 +309,13 @@ export default function FactoryPage() {
           i === 0 && humanFeedback
             ? `${baseTask}\n\nAddress this reviewer feedback:\n${humanFeedback}`
             : baseTask;
-        const text = await runStage(factory.stages[i].slug, task);
+        const stage = factory.stages[i];
+        const text = await runStage(stage.executor ?? stage.agent ?? stage.slug, task);
         setOutputs((o) => o.map((v, j) => (j === i ? text : v)));
         setStatuses((s) => s.map((v, j) => (j === i ? 'done' : v)));
-        if (factory.stages[i].slug === factory.finalSlug) setResult(extractCode(text) || text.trim());
+        if (factory.stages[i].slug === factory.finalSlug) {
+          setResult(factory.finalFullText ? text.trim() : extractCode(text) || text.trim());
+        }
         prev = text;
       }
     } catch (e) {
@@ -321,6 +410,18 @@ export default function FactoryPage() {
                 <Text size="supporting" color="muted">
                   {stage.blurb}
                 </Text>
+                {stage.roster ? (
+                  <Stack direction="horizontal" gap="snug" align="center">
+                    <Text size="supporting" color="muted" mono>
+                      agents
+                    </Text>
+                    {stage.roster.map((r) => (
+                      <Badge key={r} size="sm" variant="idle">
+                        {r}
+                      </Badge>
+                    ))}
+                  </Stack>
+                ) : null}
               </Stack>
             </Stack>
             {outputs[i] ? (

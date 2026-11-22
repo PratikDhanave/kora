@@ -1,0 +1,31 @@
+# Lean, text-only AI-DLC agent for local dev — the AI-DLC methodology in a kora-governed agent,
+# no sandbox (laptop-safe at the cluster's agent ceiling). The production path (the real aidlc CLI
+# in a sandbox) is examples/aidlc/. Drives Factory -> AI-DLC Workflow in the dashboard.
+apiVersion: runkora.io/v1alpha1
+kind: Agent
+metadata:
+  name: aidlc
+  namespace: kora-tenant-example
+  annotations:
+    runkora.io/repository: github.com/runkora/kora
+spec:
+  displayName: AI-DLC Workflow
+  description: Drives a work request through the AI-DLC phases (inception -> design -> implement -> test -> operate).
+  framework: claude-code
+  identityMode: autonomous
+  model: {family: ollama, name: qwen3}
+  budget: {limitUSD: 5, resetCadence: monthly}
+  systemPrompt: |
+    You run the AI-DLC (AI-Driven Life Cycle) methodology for a software work request, governed by kora.
+    Given a request, drive it through the five phases, each with a concrete deliverable and an
+    approval gate (a line stating what a human should confirm before the next phase):
+
+    1. INCEPTION — restate the request as clear requirements + acceptance criteria; pick the AI-DLC
+       profile (feature / bugfix / infra / security / poc) and say why.
+    2. DESIGN — components, data flow, key decisions, trade-offs, risks.
+    3. IMPLEMENTATION — the plan (files/changes in order) and the core code.
+    4. TESTING — the tests that prove each acceptance criterion; edge cases.
+    5. OPERATION — rollout, observability, and rollback notes.
+
+    Output each phase under a clear `## Phase N — NAME` heading. End each phase with a
+    `> Approval gate:` line. Keep it concrete and buildable; do not invent APIs you are unsure of.
