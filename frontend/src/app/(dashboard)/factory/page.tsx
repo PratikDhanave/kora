@@ -46,7 +46,11 @@ type Roster = {
   review?: string[];
 };
 
-const ROSTER_ROLES: { key: keyof Roster; label: string; variant: 'healthy' | 'idle' | 'pending' }[] = [
+const ROSTER_ROLES: {
+  key: keyof Roster;
+  label: string;
+  variant: 'healthy' | 'idle' | 'pending';
+}[] = [
   { key: 'lead', label: 'lead', variant: 'healthy' },
   { key: 'support', label: 'support', variant: 'idle' },
   { key: 'review', label: 'review', variant: 'pending' },
@@ -158,7 +162,8 @@ const FACTORIES: Factory[] = [
         executor: 'aidlc',
         name: 'Initialization',
         icon: 'route',
-        blurb: 'Scaffold, detect the workspace, initialize state, and pick the profile; the composer adapts the stage set.',
+        blurb:
+          'Scaffold, detect the workspace, initialize state, and pick the profile; the composer adapts the stage set.',
         roster: { lead: ['composer'] },
         task: (source) =>
           `AI-DLC PHASE 0 INITIALIZATION (stages 0.1-0.3, no gate). Pick the workflow profile ` +
@@ -171,7 +176,8 @@ const FACTORIES: Factory[] = [
         executor: 'aidlc',
         name: 'Ideation',
         icon: 'search',
-        blurb: '1.1-1.7: intent, market research, feasibility, scope, team, rough mockups, approval & handoff.',
+        blurb:
+          '1.1-1.7: intent, market research, feasibility, scope, team, rough mockups, approval & handoff.',
         roster: {
           lead: ['product', 'architect', 'delivery', 'design'],
           support: ['aws-platform', 'compliance'],
@@ -188,7 +194,8 @@ const FACTORIES: Factory[] = [
         executor: 'aidlc',
         name: 'Inception',
         icon: 'layers',
-        blurb: '2.1-2.9: requirements, user stories, refined mockups, domain design, units, contracts, delivery plan.',
+        blurb:
+          '2.1-2.9: requirements, user stories, refined mockups, domain design, units, contracts, delivery plan.',
         roster: {
           lead: ['product', 'architect', 'design', 'delivery', 'developer', 'pipeline-deploy'],
           support: ['aws-platform', 'quality', 'compliance', 'devsecops'],
@@ -205,7 +212,8 @@ const FACTORIES: Factory[] = [
         executor: 'aidlc',
         name: 'Construction',
         icon: 'braces',
-        blurb: '3.1-3.5 per Unit (functional, NFR, infrastructure design, code), then 3.6 build & test and 3.7 CI.',
+        blurb:
+          '3.1-3.5 per Unit (functional, NFR, infrastructure design, code), then 3.6 build & test and 3.7 CI.',
         roster: {
           lead: ['architect', 'aws-platform', 'developer', 'quality', 'pipeline-deploy'],
           support: ['compliance', 'devsecops'],
@@ -223,7 +231,8 @@ const FACTORIES: Factory[] = [
         executor: 'aidlc',
         name: 'Operation',
         icon: 'rocket',
-        blurb: '4.1-4.7: deployment pipeline, environments, deploy, observability, incident response, performance, feedback.',
+        blurb:
+          '4.1-4.7: deployment pipeline, environments, deploy, observability, incident response, performance, feedback.',
         roster: {
           lead: ['pipeline-deploy', 'aws-platform', 'operations', 'quality'],
           support: ['developer', 'compliance', 'devsecops'],
@@ -304,18 +313,21 @@ export default function FactoryPage() {
   const [wantsChanges, setWantsChanges] = useState(false);
   const [feedback, setFeedback] = useState('');
 
-  const selectFactory = useCallback((f: Factory) => {
-    if (running) return;
-    setFactory(f);
-    setSource(f.sample);
-    setStatuses(f.stages.map(() => 'idle'));
-    setOutputs(f.stages.map(() => ''));
-    setResult('');
-    setError(null);
-    setDecision('pending');
-    setWantsChanges(false);
-    setFeedback('');
-  }, [running]);
+  const selectFactory = useCallback(
+    (f: Factory) => {
+      if (running) return;
+      setFactory(f);
+      setSource(f.sample);
+      setStatuses(f.stages.map(() => 'idle'));
+      setOutputs(f.stages.map(() => ''));
+      setResult('');
+      setError(null);
+      setDecision('pending');
+      setWantsChanges(false);
+      setFeedback('');
+    },
+    [running],
+  );
 
   const onFiles = useCallback(async (list: FileList | null) => {
     if (!list || list.length === 0) return;
@@ -326,40 +338,43 @@ export default function FactoryPage() {
     setSource(parts.join('\n\n'));
   }, []);
 
-  const run = useCallback(async (humanFeedback?: string) => {
-    setRunning(true);
-    setError(null);
-    setResult('');
-    setDecision('pending');
-    setWantsChanges(false);
-    setStatuses(factory.stages.map(() => 'idle'));
-    setOutputs(factory.stages.map(() => ''));
+  const run = useCallback(
+    async (humanFeedback?: string) => {
+      setRunning(true);
+      setError(null);
+      setResult('');
+      setDecision('pending');
+      setWantsChanges(false);
+      setStatuses(factory.stages.map(() => 'idle'));
+      setOutputs(factory.stages.map(() => ''));
 
-    let prev = '';
-    try {
-      for (let i = 0; i < factory.stages.length; i++) {
-        setStatuses((s) => s.map((v, j) => (j === i ? 'running' : v)));
-        const baseTask = factory.stages[i].task(source, prev);
-        const task =
-          i === 0 && humanFeedback
-            ? `${baseTask}\n\nAddress this reviewer feedback:\n${humanFeedback}`
-            : baseTask;
-        const stage = factory.stages[i];
-        const text = await runStage(stage.executor ?? stage.agent ?? stage.slug, task);
-        setOutputs((o) => o.map((v, j) => (j === i ? text : v)));
-        setStatuses((s) => s.map((v, j) => (j === i ? 'done' : v)));
-        if (factory.stages[i].slug === factory.finalSlug) {
-          setResult(factory.finalFullText ? text.trim() : extractCode(text) || text.trim());
+      let prev = '';
+      try {
+        for (let i = 0; i < factory.stages.length; i++) {
+          setStatuses((s) => s.map((v, j) => (j === i ? 'running' : v)));
+          const baseTask = factory.stages[i].task(source, prev);
+          const task =
+            i === 0 && humanFeedback
+              ? `${baseTask}\n\nAddress this reviewer feedback:\n${humanFeedback}`
+              : baseTask;
+          const stage = factory.stages[i];
+          const text = await runStage(stage.executor ?? stage.agent ?? stage.slug, task);
+          setOutputs((o) => o.map((v, j) => (j === i ? text : v)));
+          setStatuses((s) => s.map((v, j) => (j === i ? 'done' : v)));
+          if (factory.stages[i].slug === factory.finalSlug) {
+            setResult(factory.finalFullText ? text.trim() : extractCode(text) || text.trim());
+          }
+          prev = text;
         }
-        prev = text;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'the factory run failed');
+        setStatuses((s) => s.map((v) => (v === 'running' ? 'error' : v)));
+      } finally {
+        setRunning(false);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'the factory run failed');
-      setStatuses((s) => s.map((v) => (v === 'running' ? 'error' : v)));
-    } finally {
-      setRunning(false);
-    }
-  }, [factory, source]);
+    },
+    [factory, source],
+  );
 
   return (
     <Stack gap="relaxed" paddingBlock="relaxed" paddingInline="relaxed">

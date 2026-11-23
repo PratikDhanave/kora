@@ -45,7 +45,12 @@ async function mockFactoryRuns(page: Page, outputs: Record<string, string>): Pro
   const runToSlug = new Map<string, string>();
 
   await page.route('**/api/agents/types/*/runs', async (route: Route) => {
-    const slug = decodeURIComponent(route.request().url().match(/\/types\/([^/]+)\/runs/)![1]);
+    const slug = decodeURIComponent(
+      route
+        .request()
+        .url()
+        .match(/\/types\/([^/]+)\/runs/)![1],
+    );
     const id = `run-${(counter += 1)}`;
     runToSlug.set(id, slug);
     await route.fulfill({
@@ -56,7 +61,10 @@ async function mockFactoryRuns(page: Page, outputs: Record<string, string>): Pro
   });
 
   await page.route('**/api/agents/runs/*/events', async (route: Route) => {
-    const id = route.request().url().match(/\/runs\/([^/]+)\/events/)![1];
+    const id = route
+      .request()
+      .url()
+      .match(/\/runs\/([^/]+)\/events/)![1];
     const text = outputs[runToSlug.get(id) ?? ''] ?? 'ok';
     await route.fulfill({
       status: 200,
