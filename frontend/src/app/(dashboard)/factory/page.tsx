@@ -35,9 +35,22 @@ type Stage = {
   agent?: string;
   /** Live agent slug to actually execute against, when it differs from the logical `agent`. */
   executor?: string;
-  /** Role agents composed under this stage (shown as the phase's roster). */
-  roster?: string[];
+  /** Personas the stage's conductor adopts (shown as the phase's roster). */
+  roster?: Roster;
 };
+
+/** A phase's AI-DLC personas by role: leads author stages, support folds in, review gates them. */
+type Roster = {
+  lead: string[];
+  support?: string[];
+  review?: string[];
+};
+
+const ROSTER_ROLES: { key: keyof Roster; label: string; variant: 'healthy' | 'idle' | 'pending' }[] = [
+  { key: 'lead', label: 'lead', variant: 'healthy' },
+  { key: 'support', label: 'support', variant: 'idle' },
+  { key: 'review', label: 'review', variant: 'pending' },
+];
 
 type Factory = {
   id: string;
@@ -124,15 +137,15 @@ const FACTORIES: Factory[] = [
     ],
   },
   {
-    // The full AI-DLC roster (awslabs/aidlc-workflows) as a phase-grouped factory: 14 role agents
-    // across the 5 AI-DLC phases (see examples/aidlc/agents.yaml). On a real cluster each phase
-    // routes to its own agents; on the laptop every stage executes against the single live `aidlc`
-    // agent (executor), with each phase's role roster shown and a human gate on the final output.
+    // AI-DLC (awslabs/aidlc-workflows) as a phase-grouped factory. As in AI-DLC, one conductor
+    // (the `aidlc` agent, the executor) drives every phase and adopts the 14 personas in its own
+    // context; agents never invoke each other. Each roster is the AI-DLC lead/support/review table
+    // for that phase. The personas are also deployed as kora Agents (examples/aidlc/agents.yaml).
     id: 'aidlc',
     name: 'AI-DLC Pipeline',
     icon: 'route',
     blurb:
-      'The full AI-DLC life cycle — 14 kora-governed agents across 5 phases: Initialization → Ideation → Inception → Construction → Operation.',
+      'The AI-DLC life cycle — one kora-governed conductor adopting 14 agent personas across 5 phases and 33 stages: Initialization → Ideation → Inception → Construction → Operation.',
     inputLabel: 'Describe the work request (a feature, a fix, an integration)',
     sample:
       'Add a /healthz endpoint to our Go service that checks the Postgres connection and ' +
@@ -145,59 +158,81 @@ const FACTORIES: Factory[] = [
         executor: 'aidlc',
         name: 'Initialization',
         icon: 'route',
-        blurb: 'The composer reads the request, picks the AI-DLC scope, and plans the stages.',
-        roster: ['composer'],
+        blurb: 'Scaffold, detect the workspace, initialize state, and pick the profile; the composer adapts the stage set.',
+        roster: { lead: ['composer'] },
         task: (source) =>
-          `AI-DLC INITIALIZATION. As the composer, read this work request, choose the AI-DLC scope ` +
-          `(feature / bugfix / refactor / infra / security-patch / poc / mvp / express / classic / ` +
-          `enterprise / workshop) and justify it, then outline the stages.\n\nWORK REQUEST:\n${source}`,
+          `AI-DLC PHASE 0 INITIALIZATION (stages 0.1-0.3, no gate). Pick the workflow profile ` +
+          `(classic / express / feature / enterprise / mvp / poc / bugfix / refactor / infra / ` +
+          `security-patch / workshop) and justify it, then list the stages that will run in each ` +
+          `phase and the conditional stages skipped, with a reason for each.\n\nWORK REQUEST:\n${source}`,
       },
       {
         slug: 'aidlc-ideation',
         executor: 'aidlc',
         name: 'Ideation',
         icon: 'search',
-        blurb: 'Product-lead frames intent & outcomes; product derives requirements + acceptance criteria.',
-        roster: ['product-lead', 'product'],
+        blurb: '1.1-1.7: intent, market research, feasibility, scope, team, rough mockups, approval & handoff.',
+        roster: {
+          lead: ['product', 'architect', 'delivery', 'design'],
+          support: ['aws-platform', 'compliance'],
+          review: ['product-lead'],
+        },
         task: (source, prev) =>
-          `AI-DLC IDEATION. Given the scope plan, frame the intent (problem, users, outcome, success ` +
-          `measures), then derive numbered, testable requirements and acceptance criteria.\n\n` +
-          `SCOPE PLAN:\n${prev}\n\nWORK REQUEST:\n${source}`,
+          `AI-DLC PHASE 1 IDEATION (stages 1.1-1.7). Run each stage the profile keeps, under its lead ` +
+          `persona: intent-statement.md, feasibility-assessment.md, scope-document.md, ` +
+          `initiative-brief.md. Product-lead reviews 1.1 and 1.6. End with the phase check.\n\n` +
+          `PROFILE AND STAGE PLAN:\n${prev}\n\nWORK REQUEST:\n${source}`,
       },
       {
         slug: 'aidlc-inception',
         executor: 'aidlc',
         name: 'Inception',
         icon: 'layers',
-        blurb: 'Architect + design produce the design; the architecture-reviewer reviews it adversarially.',
-        roster: ['architect', 'design', 'architecture-reviewer'],
+        blurb: '2.1-2.9: requirements, user stories, refined mockups, domain design, units, contracts, delivery plan.',
+        roster: {
+          lead: ['product', 'architect', 'design', 'delivery', 'developer', 'pipeline-deploy'],
+          support: ['aws-platform', 'quality', 'compliance', 'devsecops'],
+          review: ['product-lead', 'architecture-reviewer'],
+        },
         task: (source, prev) =>
-          `AI-DLC INCEPTION. Design the system (components, data flow, key decisions, trade-offs), take ` +
-          `it to detailed design (interfaces, data models, contracts), then review it adversarially ` +
-          `against the requirements. Trace each decision to a requirement.\n\nREQUIREMENTS:\n${prev}`,
+          `AI-DLC PHASE 2 INCEPTION (stages 2.1-2.9). Under each lead persona: requirements.md ` +
+          `(numbered, testable acceptance criteria), stories.md, components.md, unit-of-work.md, ` +
+          `contracts, bolt-plan.md. Product-lead reviews 2.3-2.5; architecture-reviewer reviews ` +
+          `2.6-2.8. End with the phase check.\n\nIDEATION:\n${prev}\n\nWORK REQUEST:\n${source}`,
       },
       {
         slug: 'aidlc-construction',
         executor: 'aidlc',
         name: 'Construction',
         icon: 'braces',
-        blurb: 'Developer builds; quality designs tests; devsecops, compliance & aws-platform harden it.',
-        roster: ['developer', 'quality', 'devsecops', 'compliance', 'aws-platform'],
+        blurb: '3.1-3.5 per Unit (functional, NFR, infrastructure design, code), then 3.6 build & test and 3.7 CI.',
+        roster: {
+          lead: ['architect', 'aws-platform', 'developer', 'quality', 'pipeline-deploy'],
+          support: ['compliance', 'devsecops'],
+          review: ['architecture-reviewer'],
+        },
         task: (source, prev) =>
-          `AI-DLC CONSTRUCTION. Implement the approved design (plan + core code), design the tests that ` +
-          `prove each acceptance criterion, and note the security, compliance and platform concerns.\n\n` +
-          `DESIGN:\n${prev}`,
+          `AI-DLC PHASE 3 CONSTRUCTION (stages 3.1-3.7). For each Unit: functional design, NFR ` +
+          `requirements and design, infrastructure design, then code-generation-plan.md and the core ` +
+          `code. Then build-instructions.md and test-results.md with a test per acceptance criterion, ` +
+          `and ci-config.md. Architecture-reviewer reviews 3.1-3.5. End with the phase check.\n\n` +
+          `INCEPTION:\n${prev}`,
       },
       {
         slug: 'aidlc-operation',
         executor: 'aidlc',
         name: 'Operation',
         icon: 'rocket',
-        blurb: 'Pipeline-deploy, delivery & operations ship it: CI/CD, rollout, observability, rollback.',
-        roster: ['pipeline-deploy', 'delivery', 'operations'],
+        blurb: '4.1-4.7: deployment pipeline, environments, deploy, observability, incident response, performance, feedback.',
+        roster: {
+          lead: ['pipeline-deploy', 'aws-platform', 'operations', 'quality'],
+          support: ['developer', 'compliance', 'devsecops'],
+        },
         task: (source, prev) =>
-          `AI-DLC OPERATION. Produce the CI/CD pipeline, the rollout strategy with a rollback trigger, ` +
-          `and the observability + runbook tied to the acceptance criteria.\n\nBUILD:\n${prev}`,
+          `AI-DLC PHASE 4 OPERATION (stages 4.1-4.7, all conditional on the profile). Under each lead ` +
+          `persona: cd-config.md, deployment-strategy.md, rollback-runbook.md, dashboards.md and ` +
+          `slo-config.md tied to the acceptance criteria, performance validation, and the feedback ` +
+          `loop.\n\nCONSTRUCTION:\n${prev}`,
       },
     ],
   },
@@ -410,18 +445,22 @@ export default function FactoryPage() {
                 <Text size="supporting" color="muted">
                   {stage.blurb}
                 </Text>
-                {stage.roster ? (
-                  <Stack direction="horizontal" gap="snug" align="center">
-                    <Text size="supporting" color="muted" mono>
-                      agents
-                    </Text>
-                    {stage.roster.map((r) => (
-                      <Badge key={r} size="sm" variant="idle">
-                        {r}
-                      </Badge>
-                    ))}
-                  </Stack>
-                ) : null}
+                {stage.roster
+                  ? ROSTER_ROLES.map(({ key, label, variant }) =>
+                      stage.roster?.[key]?.length ? (
+                        <Stack key={key} direction="horizontal" gap="snug" align="center">
+                          <Text size="supporting" color="muted" mono>
+                            {label}
+                          </Text>
+                          {stage.roster[key].map((r) => (
+                            <Badge key={r} size="sm" variant={variant}>
+                              {r}
+                            </Badge>
+                          ))}
+                        </Stack>
+                      ) : null,
+                    )
+                  : null}
               </Stack>
             </Stack>
             {outputs[i] ? (

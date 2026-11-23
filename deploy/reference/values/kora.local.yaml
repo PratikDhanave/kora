@@ -38,6 +38,16 @@ opaGateway:
     tag: 1.21.0-envoy-static
 
 agents:
+  # One session-manager pod per agent: a laptop cluster can't reserve two for
+  # every agent in a full roster (e.g. the 14 AI-DLC roles).
+  scheduling:
+    minReplicas: 1
+  # Idle session-manager pods use a fraction of the istio-proxy's 100m default
+  # request; trimming it fits a full roster on the laptop. Limits are unchanged.
+  workloads:
+    sessionManager:
+      podAnnotations:
+        sidecar.istio.io/proxyCPU: 20m
   sandboxImages:
     warmBase: true
     # make up does not build the bundled images. Run make redeploy-sandbox-images
@@ -65,6 +75,27 @@ operator:
   leaderElection: false
   podDisruptionBudget:
     enabled: false
+  # Smaller OPA sidecar request on tenant pods, for the same laptop budget.
+  # Sandbox sidecars are pinned separately (injection.sandboxSidecars).
+  injection:
+    opa:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 250m
+          memory: 128Mi
+
+# Smaller identity-proxy sidecar request on tenant pods; limits unchanged.
+identityProxy:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
 
 egressGateway:
   # The local Kubernetes connection points at the k3d API server, which listens

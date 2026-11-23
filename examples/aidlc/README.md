@@ -1,7 +1,7 @@
 # AI-DLC on kora
 
 Run [AI-DLC](https://github.com/awslabs/aidlc-workflows) (AWS Labs' AI-Driven Life Cycle
-methodology — 5 phases, 33 stages, 11 profiles) as a **kora-governed agent**.
+methodology: 5 phases, 33 stages, 11 profiles) as a **kora-governed agent**.
 
 ## Why they fit together
 
@@ -9,40 +9,52 @@ AI-DLC and kora operate at different layers, and neither overlaps the other:
 
 | | AI-DLC | kora |
 | --- | --- | --- |
-| **Is** | a *methodology* — how to take work from idea to production | a *control plane* — who the agent is, what it can touch, how it connects |
+| **Is** | a *methodology*: how to take work from idea to production | a *control plane*: who the agent is, what it can touch, how it connects |
 | **Runs** | on a coding-agent harness (Claude Code, Codex, Cursor…) | the agent, in a governed sandbox |
 | **Has** | phase gates, profiles, an audit trail of its own | identity (SPIFFE), policy (OPA), credential brokering, budget |
 | **Lacks** | any identity / policy / credential layer | an opinion on *how* the agent should work |
 
-AI-DLC is harness-agnostic and `aidlc config --harness claude` targets **Claude Code** — which is
+AI-DLC is harness-agnostic and `aidlc config --harness claude` targets **Claude Code**, which is
 exactly the `framework: claude-code` kora agents run. So an AI-DLC workflow drops into a kora agent
 unchanged, and gains everything AI-DLC deliberately leaves out. The result is **governed AI-DLC**:
 every `/aidlc` phase is policy-checked, every outbound call has credentials brokered, every action
 traces back to the human who initiated it. AI-DLC's own approval gates line up with kora's
 human-in-the-loop review (see the Factory page's review gate).
 
-Which of kora's three questions does this touch? **How does it connect?** — AI-DLC's tools and PRs
-flow through kora's egress broker instead of handling credentials directly — while preserving *who*
+Which of kora's three questions does this touch? **How does it connect?** AI-DLC's tools and PRs
+flow through kora's egress broker instead of handling credentials directly, while preserving *who*
 (the agent's SPIFFE identity) and *what* (the agent's policy grants).
 
 ## Two ways to run it
 
-### 1. Local prototype (what's deployed) — methodology in a text-only agent
+### 1. Local prototype (what's deployed): methodology in a text-only agent
 
 A laptop can't run the real CLI-in-sandbox for every phase (a sandbox per agent, a frontier model),
 so the prototype is a **text-only** agent whose system prompt *is* the AI-DLC methodology. It drives
-the five phases with approval gates, governed by kora, with no sandbox — so it's safe at the
+the five phases with approval gates, governed by kora, with no sandbox, so it's safe at the
 cluster's agent ceiling.
 
 ```bash
 kubectl apply -f deploy/local/declarative/agent-aidlc.yaml   # the lean, text-only agent
 ```
 
-Then open **Factory → AI-DLC Workflow** in the dashboard: one agent drives the phases across two
-gated stages (**Plan & Design** → **Build & Ship**), with the human-in-the-loop review between the
-plan and the build.
+Then open **Factory → AI-DLC Pipeline** in the dashboard. As in AI-DLC itself, one conductor (the
+`aidlc` agent) drives the five phases and adopts the 14 agent personas in its own context; agents
+never invoke each other. Each phase shows its lead, support and review personas, and a human gate
+reviews the final output.
 
-### 2. Production path — the real `aidlc` CLI in a governed sandbox
+The 14 personas are also deployed as separate kora Agents, one identity, policy and budget per
+role, for running a single persona on a single stage:
+
+```bash
+kubectl apply -f examples/aidlc/agents.yaml   # 11 experts, 2 reviewers, the composer
+```
+
+Each agent reserves a session-manager pod, so the laptop cluster runs one per agent
+(`agents.scheduling.minReplicas: 1` in `deploy/reference/values/kora.local.yaml`) and still
+saturates near the full roster.
+
+### 2. Production path: the real `aidlc` CLI in a governed sandbox
 
 On a real cluster with a capable model, swap the text-only agent for the sandboxed one, which
 carries the actual `aidlc` binary and runs `/aidlc <request>` for all workflows:
