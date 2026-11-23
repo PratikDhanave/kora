@@ -3,7 +3,7 @@
 DartForge is an agent factory that converts **Swift and Kotlin source into idiomatic Dart**. It is
 modelled on the `constellation` delivery factory, with two deliberate differences:
 
-1. **Two converters** — `dartforge-converter-swift` and `dartforge-converter-kotlin`, routed by a
+1. **Two converters**: `dartforge-converter-swift` and `dartforge-converter-kotlin`, routed by a
    `source-lang:*` issue label, sharing one `dart` sandbox. The reading problem differs by source
    language; the target toolchain is the same.
 2. **GitHub issue labels are the state bus** (no Plane). Every stage transition is an

@@ -1,4 +1,4 @@
-# kora — Complete Documentation
+# kora: Complete Documentation
 
 > **kora** is the control plane for AI agents. It gives every agent a verifiable identity, checks every action against policy before it runs, and brokers every credential so agents never hold secrets.
 
@@ -48,9 +48,9 @@ kora is an open source control plane for running agent factories in production. 
 
 The architecture is organized around **three questions**:
 
-1. **Who is this agent?** — Identity, shared by humans and agents
-2. **What can it access?** — Policy, evaluated before an action executes
-3. **How does it connect?** — Connectivity, brokered so credentials are injected just-in-time
+1. **Who is this agent?** Identity, shared by humans and agents
+2. **What can it access?** Policy, evaluated before an action executes
+3. **How does it connect?** Connectivity, brokered so credentials are injected just-in-time
 
 ### System Context
 
@@ -145,9 +145,9 @@ stateDiagram-v2
 | `starting` | Starting its session | `active`, or `failed` if it never finishes starting |
 | `active` | The agent is working | `idle` when agent finishes turn, `completed` when exits cleanly, `failed` on error, `budget_exhausted` |
 | `idle` | Agent waiting for next message | `active` on new message, `completed` after idle timeout, `failed` if agent exits unexpectedly |
-| `completed` | Run ended cleanly | — |
-| `failed` | Run hit unrecoverable error | — |
-| `budget_exhausted` | Run reached its budget limit | — |
+| `completed` | Run ended cleanly | Terminal |
+| `failed` | Run hit unrecoverable error | Terminal |
+| `budget_exhausted` | Run reached its budget limit | Terminal |
 
 An `idle` run is healthy. Its session stays alive waiting for the next message until the idle timeout completes the run:
 - 20 minutes for a run a person started
@@ -252,7 +252,7 @@ Agents reach models, tools, and external systems without ever holding a credenti
 
 #### Models
 
-Every model call goes through the inference gateway. The gateway holds upstream keys for every registered inference provider. Platform teams offer models as **virtual models** — stable aliases that allow upgrading the model behind an alias or routing to another provider without affecting downstream agents/users.
+Every model call goes through the inference gateway. The gateway holds upstream keys for every registered inference provider. Platform teams offer models as **virtual models**: stable aliases that allow upgrading the model behind an alias or routing to another provider without affecting downstream agents/users.
 
 Virtual models support failover between providers, regions, and models. Enterprises can route a virtual model to an existing gateway like LiteLLM or Portkey through a `compatible` endpoint.
 
@@ -348,8 +348,8 @@ Each connection publishes a scope for every action it supports (e.g., reading re
 
 kora is deployed as **two Helm charts**:
 
-1. `kora-crds` — Installs custom resources
-2. `kora` — Installs operator, cluster-scoped identity and gateway resources, platform services
+1. `kora-crds`: Installs custom resources
+2. `kora`: Installs operator, cluster-scoped identity and gateway resources, platform services
 
 ### Prerequisites
 
@@ -367,7 +367,7 @@ kora is deployed as **two Helm charts**:
 | Istio | 1.30–1.31 | Sidecar mode, CNI enabled, trust domain must match kora's |
 | SPIRE | 1.15.3 (chart 0.30.2) | SPIFFE CSI driver, ClusterSPIFFEID CRD, agent SDS enabled |
 | PostgreSQL | 14–18 | Reachable from system namespace; kora applies own schema via migration hook |
-| Redis | — | Reachable from system namespace; TLS on by default |
+| Redis | Not pinned | Reachable from system namespace; TLS on by default |
 
 ### Installation Paths
 
@@ -562,7 +562,7 @@ All outbound HTTP goes through typed clients in `internal/platform/clients/{serv
 cfg := config.MustLoadService[AppConfig]("cmd/identity", config.Environment())
 ```
 
-Secrets never in YAML — tagged `yaml:"-"` and loaded via `os.Getenv`.
+Secrets never in YAML: tagged `yaml:"-"` and loaded via `os.Getenv`.
 
 #### 6. Migrations via Goose (per-binary)
 
@@ -579,9 +579,9 @@ Migrations live under `backend/cmd/{service}/migrations/`. `make migrate-lint` e
 ### PRD → ADR → Implementation
 
 For new features and significant changes:
-1. **PRD** (`docs/prd/`) — Define problem and solution
-2. **ADR** (`docs/adr/`) — Capture technical approach (Context → Options → Decision → Consequences)
-3. **Implementation** — Reference PRD/ADR in commits and PR
+1. **PRD** (`docs/prd/`): Define problem and solution
+2. **ADR** (`docs/adr/`): Capture technical approach (Context → Options → Decision → Consequences)
+3. **Implementation**: Reference PRD/ADR in commits and PR
 
 Bug fixes and minor changes skip PRD/ADR. **An ADR before significant implementation is a hard rule.**
 
@@ -593,7 +593,7 @@ make up      # Backing services, k3d cluster, migrations, operator, tenants, wor
 make auth    # Device Authorization Grant → dev@local.runkora.io / password
 ```
 
-`make up` is idempotent — re-run whenever cluster drifts.
+`make up` is idempotent: re-run whenever cluster drifts.
 
 ### Calling Authenticated APIs
 
@@ -687,9 +687,9 @@ All PRs must pass `make check` with zero issues.
 
 ### What Exists Today
 
-1. **Unit tests** — Bulk of coverage, table-driven, run by `make test` (race + coverage) and `make check`. No cluster or database required.
+1. **Unit tests**: Bulk of coverage, table-driven, run by `make test` (race + coverage) and `make check`. No cluster or database required.
 
-2. **Postgres-backed repository tests** — Named `TestPostgres_*`, gated on `KORA_TEST_DB_URL`. Skip when unset. Live beside the repository they exercise.
+2. **Postgres-backed repository tests**: Named `TestPostgres_*`, gated on `KORA_TEST_DB_URL`. Skip when unset. Live beside the repository they exercise.
 
 | Package | Test Files | Covers |
 |---------|------------|--------|
@@ -706,9 +706,9 @@ Run locally:
 make test-postgres   # Applies schema with cmd/migrate first
 ```
 
-3. **Integration suite** — `backend/tests/integration/policy/authz_test.go` (build tag `integration`). Needs full running cluster. Run via `make test-integration`. Not run by CI or `make check`.
+3. **Integration suite**: `backend/tests/integration/policy/authz_test.go` (build tag `integration`). Needs full running cluster. Run via `make test-integration`. Not run by CI or `make check`.
 
-4. **No dedicated lint-rule unit tests** — Custom `golangci-lint` rules validated empirically via `make check`.
+4. **No dedicated lint-rule unit tests**: Custom `golangci-lint` rules validated empirically via `make check`.
 
 ### Testing Principles
 
@@ -761,7 +761,7 @@ All product JSX **must** use Hades (`@runkora/hades`). Raw HTML primitives are b
 
 1. Used by exactly one file → keep inline (extract only if host file > ~300 lines JSX)
 2. All consumers within same feature area → **Tier 3**
-3. Consumers span ≥2 feature areas AND no kora domain knowledge → **Tier 1 (Hades)** — requires human approval
+3. Consumers span ≥2 feature areas AND no kora domain knowledge → **Tier 1 (Hades)**: requires human approval
 4. Consumers span ≥2 feature areas AND kora-domain-aware → **Tier 2**
 
 Every extracted component file must open with `@tier` JSDoc comment:
@@ -888,13 +888,13 @@ Product requirements: [docs/prd/README.md](prd/README.md)
 
 When contributing code or architecture:
 
-1. **Security First** — Every component designed with security as primary concern
-2. **Identity-Driven** — All actions tied to verified identities
-3. **Policy-Governed** — Policies enforced _before_ execution, not after
-4. **Observable** — Complete visibility: distributed tracing, structured logging, log-trace correlation
-5. **Extensible** — Pluggable integrations for models, tools, identity providers
-6. **Production-Grade** — Built for enterprise reliability and scale
-7. **Open Standards** — OPA for policy, OIDC/SPIFFE for identity, MCP for tools, OpenTelemetry for observability
+1. **Security First**: Every component designed with security as primary concern
+2. **Identity-Driven**: All actions tied to verified identities
+3. **Policy-Governed**: Policies enforced _before_ execution, not after
+4. **Observable**: Complete visibility: distributed tracing, structured logging, log-trace correlation
+5. **Extensible**: Pluggable integrations for models, tools, identity providers
+6. **Production-Grade**: Built for enterprise reliability and scale
+7. **Open Standards**: OPA for policy, OIDC/SPIFFE for identity, MCP for tools, OpenTelemetry for observability
 
 ---
 
